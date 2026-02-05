@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Benchmark - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-speedometer2 me-2"></i>Industry Benchmarking</h2>
+            <p class="text-muted">{{ portfolio.name }} - Compare against industry standards</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+            <button class="btn btn-primary" onclick="loadBenchmark()" id="loadBtn">
+                <i class="bi bi-graph-up-arrow me-2"></i>Run Benchmark
+            </button>
+        </div>
+    </div>
+
+    <!-- Maturity Summary -->
+    <div class="row g-3 mb-4" id="summaryCards" style="display: none;">
+        <div class="col-md-3">
+            <div class="card text-center" id="maturityCard">
+                <div class="card-body py-3">
+                    <div class="fs-4 fw-bold" id="maturityLevel">-</div>
+                    <small class="text-muted">Maturity Level</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold" id="maturityScore">-</div>
+                    <small class="text-muted">Maturity Score</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold" id="healthScore">-</div>
+                    <small class="text-muted">Health Score</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold" id="costScore">-</div>
+                    <small class="text-muted">Cost Efficiency</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Health Distribution -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Health Distribution vs Benchmark</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="healthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dimension Scores -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-radar me-2"></i>Maturity Dimensions</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="dimensionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Peer Gaps -->
+    <div class="card mt-4" id="gapsCard" style="display: none;">
+        <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Peer Gaps Identified</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Area</th>
+                            <th>Severity</th>
+                            <th>Gap Description</th>
+                            <th>Improvement Potential</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gapsTable">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Next Level Requirements -->
+    <div class="card mt-4" id="requirementsCard" style="display: none;">
+        <div class="card-header bg-primary text-white">
+            <h6 class="mb-0"><i class="bi bi-ladder me-2"></i>Requirements for Next Maturity Level</h6>
+        </div>
+        <div class="card-body" id="requirementsList">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+    <!-- Best Practices -->
+    <div class="card mt-4" id="practicesCard" style="display: none;">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-bookmark-star me-2"></i>Best Practices Recommendations</h6>
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" id="practicesTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#tab-portfolio">Portfolio Optimization</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tab-cost">Cost Management</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tab-risk">Risk Management</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tab-modernization">Modernization</a>
+                </li>
+            </ul>
+            <div class="tab-content" id="practicesContent">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let healthChart = null;
+let dimensionChart = null;
+
+document.addEventListener('DOMContentLoaded', loadBenchmark);
+
+async function loadBenchmark() {
+    const btn = document.getElementById('loadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing...';
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/benchmark/full`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        const report = data.benchmark_report;
+        displaySummary(report);
+        displayHealthChart(report.health_benchmark);
+        displayDimensionChart(report.maturity_assessment);
+        displayGaps(report.peer_gaps);
+        displayRequirements(report.maturity_assessment);
+        displayBestPractices(report.best_practices);
+
+    } catch (error) {
+        console.error('Error loading benchmark:', error);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-graph-up-arrow me-2"></i>Run Benchmark';
+    }
+}
+
+function displaySummary(report) {
+    document.getElementById('summaryCards').style.display = 'flex';
+
+    const maturity = report.maturity_assessment;
+    const health = report.health_benchmark;
+    const cost = report.cost_benchmark;
+
+    document.getElementById('maturityLevel').textContent = maturity.maturity_level;
+    document.getElementById('maturityScore').textContent = maturity.composite_score.toFixed(0);
+    document.getElementById('healthScore').textContent = health.health_score.toFixed(0);
+    document.getElementById('costScore').textContent = cost.efficiency_score.toFixed(0);
+
+    // Color maturity card
+    const maturityCard = document.getElementById('maturityCard');
+    const levelColors = {
+        'Optimized': 'success',
+        'Managed': 'primary',
+        'Defined': 'info',
+        'Repeatable': 'warning',
+        'Initial': 'danger'
+    };
+    maturityCard.classList.add('bg-' + (levelColors[maturity.maturity_level] || 'secondary'), 'bg-opacity-10');
+}
+
+function displayHealthChart(healthData) {
+    const ctx = document.getElementById('healthChart').getContext('2d');
+    if (healthChart) healthChart.destroy();
+
+    const labels = ['Critical', 'Poor', 'Fair', 'Good', 'Excellent'];
+    const actual = ['critical', 'poor', 'fair', 'good', 'excellent'].map(k =>
+        (healthData.actual_distribution[k] || 0) * 100
+    );
+    const benchmark = ['critical', 'poor', 'fair', 'good', 'excellent'].map(k =>
+        (healthData.benchmark_distribution[k] || 0) * 100
+    );
+
+    healthChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Your Portfolio',
+                    data: actual,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)'
+                },
+                {
+                    label: `Benchmark (${healthData.benchmark_category})`,
+                    data: benchmark,
+                    backgroundColor: 'rgba(156, 163, 175, 0.5)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 50,
+                    ticks: {callback: v => v + '%'}
+                }
+            }
+        }
+    });
+}
+
+function displayDimensionChart(maturity) {
+    const ctx = document.getElementById('dimensionChart').getContext('2d');
+    if (dimensionChart) dimensionChart.destroy();
+
+    const scores = maturity.dimension_scores;
+
+    dimensionChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['Health Management', 'Cost Efficiency', 'Value Alignment'],
+            datasets: [{
+                label: 'Your Score',
+                data: [scores.health_management, scores.cost_efficiency, scores.value_alignment],
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)'
+            }, {
+                label: 'Target (80)',
+                data: [80, 80, 80],
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderColor: 'rgba(40, 167, 69, 0.5)',
+                borderDash: [5, 5]
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {min: 0, max: 100}
+            }
+        }
+    });
+}
+
+function displayGaps(gaps) {
+    const card = document.getElementById('gapsCard');
+    const table = document.getElementById('gapsTable');
+
+    if (!gaps || gaps.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = 'block';
+    table.innerHTML = gaps.map(g => `
+        <tr>
+            <td><strong>${g.area}</strong></td>
+            <td><span class="badge bg-${g.severity === 'high' ? 'danger' : 'warning'}">${g.severity}</span></td>
+            <td>${g.gap}<br><small class="text-muted">${g.recommendation}</small></td>
+            <td class="text-success fw-bold">${g.estimated_improvement}</td>
+        </tr>
+    `).join('');
+}
+
+function displayRequirements(maturity) {
+    const card = document.getElementById('requirementsCard');
+    const list = document.getElementById('requirementsList');
+    const reqs = maturity.next_level_requirements;
+
+    if (!reqs || reqs.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = 'block';
+    list.innerHTML = `
+        <p class="text-muted mb-3">To advance from <strong>${maturity.maturity_level}</strong> to the next level:</p>
+        <div class="row g-2">
+            ${reqs.map(r => `
+                <div class="col-md-4">
+                    <div class="border rounded p-3 h-100">
+                        <i class="bi bi-check2-square text-primary me-2"></i>${r}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function displayBestPractices(practices) {
+    const card = document.getElementById('practicesCard');
+    const content = document.getElementById('practicesContent');
+
+    if (!practices || practices.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = 'block';
+
+    // Group by category
+    const grouped = {};
+    practices.forEach(p => {
+        const cat = p.category || 'general';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(p);
+    });
+
+    const categoryMap = {
+        'portfolio_optimization': 'tab-portfolio',
+        'cost_management': 'tab-cost',
+        'risk_management': 'tab-risk',
+        'modernization': 'tab-modernization'
+    };
+
+    const effortColors = {Low: 'success', Medium: 'warning', High: 'danger'};
+    const impactColors = {High: 'success', Medium: 'warning', Low: 'danger'};
+
+    content.innerHTML = Object.entries(categoryMap).map(([cat, tabId]) => `
+        <div class="tab-pane fade ${cat === 'portfolio_optimization' ? 'show active' : ''}" id="${tabId}">
+            ${(grouped[cat] || []).map(p => `
+                <div class="border rounded p-3 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${p.practice}</strong>
+                            <p class="text-muted mb-1">${p.description}</p>
+                            <small class="text-success"><i class="bi bi-check-circle me-1"></i>${p.benefit}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-${effortColors[p.effort]}">${p.effort} Effort</span>
+                            <span class="badge bg-${impactColors[p.impact]}">${p.impact} Impact</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-muted">No practices in this category.</p>'}
+        </div>
+    `).join('');
+}
+</script>
+{% endblock %}

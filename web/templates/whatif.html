@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}What-If Simulator - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-lightning-charge me-2"></i>What-If Scenario Simulator</h2>
+            <p class="text-muted">{{ portfolio.name }} - Simulate rationalization scenarios</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+            <button class="btn btn-primary" onclick="loadRecommendedScenarios()" id="loadScenariosBtn">
+                <i class="bi bi-magic me-2"></i>Get Recommendations
+            </button>
+        </div>
+    </div>
+
+    <!-- Baseline Metrics -->
+    <div class="row g-3 mb-4" id="baselineCards">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="baselineApps">{{ applications|length }}</div>
+                    <small class="text-muted">Applications</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="baselineCost">${{ "{:,.0f}".format(portfolio.total_cost or 0) }}</div>
+                    <small class="text-muted">Total Cost</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="baselineHealth">-</div>
+                    <small class="text-muted">Avg Health</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="baselineValue">-</div>
+                    <small class="text-muted">Avg Value</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="baselineSecurity">-</div>
+                    <small class="text-muted">Avg Security</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center bg-warning bg-opacity-10">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold text-warning" id="baselineRisk">-</div>
+                    <small class="text-muted">Risk Score</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Scenario Builder -->
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-tools me-2"></i>Build Scenario</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Scenario Type -->
+                    <div class="mb-3">
+                        <label class="form-label">Scenario Type</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="scenarioType" id="typeRetire" value="retire" checked>
+                            <label class="btn btn-outline-danger" for="typeRetire">Retire</label>
+
+                            <input type="radio" class="btn-check" name="scenarioType" id="typeModernize" value="modernize">
+                            <label class="btn btn-outline-success" for="typeModernize">Modernize</label>
+
+                            <input type="radio" class="btn-check" name="scenarioType" id="typeConsolidate" value="consolidate">
+                            <label class="btn btn-outline-primary" for="typeConsolidate">Consolidate</label>
+                        </div>
+                    </div>
+
+                    <!-- Application Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Applications</label>
+                        <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
+                            {% for app in applications %}
+                            <div class="form-check">
+                                <input class="form-check-input app-checkbox" type="checkbox"
+                                       value="{{ app.name }}" id="app_{{ loop.index }}"
+                                       data-cost="{{ app.cost or 0 }}"
+                                       data-health="{{ app.tech_health or 5 }}"
+                                       data-value="{{ app.business_value or 5 }}">
+                                <label class="form-check-label d-flex justify-content-between w-100" for="app_{{ loop.index }}">
+                                    <span>{{ app.name }}</span>
+                                    <small class="text-muted">${{ "{:,.0f}".format(app.cost or 0) }}</small>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Modernization Options -->
+                    <div id="modernizeOptions" class="mb-3" style="display: none;">
+                        <label class="form-label">Health Improvement</label>
+                        <input type="range" class="form-range" id="healthImprovement" min="1" max="5" value="3">
+                        <div class="d-flex justify-content-between">
+                            <small>+1</small>
+                            <small id="healthValue">+3 points</small>
+                            <small>+5</small>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-100" onclick="runSimulation()">
+                        <i class="bi bi-play-fill me-2"></i>Run Simulation
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recommended Scenarios -->
+            <div class="card mt-4" id="recommendedCard" style="display: none;">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommended Scenarios</h6>
+                </div>
+                <div class="card-body p-0" id="recommendedList">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulation Results -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Simulation Results</h6>
+                </div>
+                <div class="card-body" id="resultsArea">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-bar-chart-line" style="font-size: 4rem;"></i>
+                        <p class="mt-3">Select applications and run a simulation to see the projected impact</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let baseline = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadRecommendedScenarios();
+
+    // Health slider update
+    document.getElementById('healthImprovement').addEventListener('input', (e) => {
+        document.getElementById('healthValue').textContent = `+${e.target.value} points`;
+    });
+
+    // Scenario type toggle
+    document.querySelectorAll('input[name="scenarioType"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            document.getElementById('modernizeOptions').style.display =
+                e.target.value === 'modernize' ? 'block' : 'none';
+        });
+    });
+});
+
+async function loadRecommendedScenarios() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/whatif/scenarios`);
+        const data = await response.json();
+
+        baseline = data.baseline;
+        updateBaselineDisplay(baseline);
+
+        // Show recommended scenarios
+        const card = document.getElementById('recommendedCard');
+        const list = document.getElementById('recommendedList');
+
+        if (data.recommended_scenarios && data.recommended_scenarios.length > 0) {
+            card.style.display = 'block';
+            list.innerHTML = data.recommended_scenarios.map((s, i) => `
+                <div class="p-3 ${i > 0 ? 'border-top' : ''}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${s.name}</strong>
+                            <p class="text-muted mb-1 small">${s.description}</p>
+                            ${s.estimated_savings ? `<span class="badge bg-success">Est. savings: $${s.estimated_savings.toLocaleString()}</span>` : ''}
+                            ${s.estimated_cost ? `<span class="badge bg-warning text-dark">Est. cost: $${s.estimated_cost.toLocaleString()}</span>` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick='applyRecommendation(${JSON.stringify(s)})'>
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading scenarios:', error);
+    }
+}
+
+function updateBaselineDisplay(baseline) {
+    document.getElementById('baselineApps').textContent = baseline.total_apps;
+    document.getElementById('baselineCost').textContent = '$' + baseline.total_cost.toLocaleString();
+    document.getElementById('baselineHealth').textContent = baseline.avg_health.toFixed(1);
+    document.getElementById('baselineValue').textContent = baseline.avg_value.toFixed(1);
+    document.getElementById('baselineSecurity').textContent = baseline.avg_security.toFixed(1);
+    document.getElementById('baselineRisk').textContent = baseline.risk_score.toFixed(0);
+}
+
+function applyRecommendation(scenario) {
+    // Clear existing selections
+    document.querySelectorAll('.app-checkbox').forEach(cb => cb.checked = false);
+
+    // Select recommended apps
+    if (scenario.apps) {
+        scenario.apps.forEach(appName => {
+            document.querySelectorAll('.app-checkbox').forEach(cb => {
+                if (cb.value === appName) cb.checked = true;
+            });
+        });
+    }
+
+    // Set scenario type
+    const typeMap = {'retire': 'typeRetire', 'modernize': 'typeModernize', 'consolidate': 'typeConsolidate'};
+    const typeRadio = document.getElementById(typeMap[scenario.type]);
+    if (typeRadio) {
+        typeRadio.checked = true;
+        document.getElementById('modernizeOptions').style.display =
+            scenario.type === 'modernize' ? 'block' : 'none';
+    }
+
+    runSimulation();
+}
+
+async function runSimulation() {
+    const scenarioType = document.querySelector('input[name="scenarioType"]:checked').value;
+    const selectedApps = Array.from(document.querySelectorAll('.app-checkbox:checked')).map(cb => cb.value);
+
+    if (selectedApps.length === 0) {
+        alert('Please select at least one application');
+        return;
+    }
+
+    const payload = {
+        type: scenarioType,
+        apps: selectedApps
+    };
+
+    if (scenarioType === 'modernize') {
+        payload.health_improvement = parseFloat(document.getElementById('healthImprovement').value);
+    }
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/whatif/simulate`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            displayResults(data.scenario_result);
+        } else {
+            alert('Error: ' + (data.error || 'Simulation failed'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+function displayResults(result) {
+    const impact = result.impact;
+    const details = result.details;
+    const newState = result.new_state;
+
+    const html = `
+        <h6 class="mb-3">${result.scenario_type.charAt(0).toUpperCase() + result.scenario_type.slice(1)} Scenario Impact</h6>
+
+        <!-- Impact Cards -->
+        <div class="row g-2 mb-4">
+            <div class="col-6 col-md-4">
+                <div class="card ${impact.cost_change < 0 ? 'bg-success' : 'bg-danger'} bg-opacity-10">
+                    <div class="card-body text-center py-2">
+                        <div class="fs-5 fw-bold ${impact.cost_change < 0 ? 'text-success' : 'text-danger'}">
+                            ${impact.cost_change < 0 ? '-' : '+'}$${Math.abs(impact.cost_change).toLocaleString()}
+                        </div>
+                        <small class="text-muted">Cost Change (${impact.cost_change_pct}%)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="card ${impact.health_change > 0 ? 'bg-success' : 'bg-warning'} bg-opacity-10">
+                    <div class="card-body text-center py-2">
+                        <div class="fs-5 fw-bold ${impact.health_change > 0 ? 'text-success' : 'text-warning'}">
+                            ${impact.health_change > 0 ? '+' : ''}${impact.health_change.toFixed(2)}
+                        </div>
+                        <small class="text-muted">Health Change</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="card ${impact.risk_change < 0 ? 'bg-success' : 'bg-danger'} bg-opacity-10">
+                    <div class="card-body text-center py-2">
+                        <div class="fs-5 fw-bold ${impact.risk_change < 0 ? 'text-success' : 'text-danger'}">
+                            ${impact.risk_change < 0 ? '' : '+'}${impact.risk_change.toFixed(1)}
+                        </div>
+                        <small class="text-muted">Risk Change</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th class="text-end">Baseline</th>
+                    <th class="text-end">After</th>
+                    <th class="text-end">Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Total Applications</td>
+                    <td class="text-end">${baseline.total_apps}</td>
+                    <td class="text-end">${newState.total_apps}</td>
+                    <td class="text-end">${impact.apps_change}</td>
+                </tr>
+                <tr>
+                    <td>Total Cost</td>
+                    <td class="text-end">$${baseline.total_cost.toLocaleString()}</td>
+                    <td class="text-end">$${newState.total_cost.toLocaleString()}</td>
+                    <td class="text-end ${impact.cost_change < 0 ? 'text-success' : 'text-danger'}">
+                        ${impact.cost_change < 0 ? '-' : '+'}$${Math.abs(impact.cost_change).toLocaleString()}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Avg Tech Health</td>
+                    <td class="text-end">${baseline.avg_health.toFixed(2)}</td>
+                    <td class="text-end">${newState.avg_health.toFixed(2)}</td>
+                    <td class="text-end ${impact.health_change > 0 ? 'text-success' : ''}">${impact.health_change > 0 ? '+' : ''}${impact.health_change.toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td>Portfolio Risk</td>
+                    <td class="text-end">${baseline.risk_score.toFixed(1)}</td>
+                    <td class="text-end">${newState.risk_score.toFixed(1)}</td>
+                    <td class="text-end ${impact.risk_change < 0 ? 'text-success' : 'text-danger'}">${impact.risk_change < 0 ? '' : '+'}${impact.risk_change.toFixed(1)}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        ${details.one_time_cost ? `
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            One-time implementation cost: <strong>$${details.one_time_cost.toLocaleString()}</strong>
+        </div>
+        ` : ''}
+
+        ${details.cost_savings ? `
+        <div class="alert alert-success">
+            <i class="bi bi-check-circle me-2"></i>
+            Annual cost savings: <strong>$${details.cost_savings.toLocaleString()}</strong>
+        </div>
+        ` : ''}
+    `;
+
+    document.getElementById('resultsArea').innerHTML = html;
+}
+</script>
+{% endblock %}

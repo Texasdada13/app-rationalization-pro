@@ -9,6 +9,10 @@ from .time_framework import TIMEFramework, TIMECategory, TIMEThresholds
 from .recommendation_engine import RecommendationEngine, ActionType
 from .cost_modeler import CostModeler, TCOBreakdown
 from .compliance_engine import ComplianceEngine, ComplianceFramework
+from .whatif_engine import WhatIfScenarioEngine
+from .roadmap_engine import PrioritizationRoadmapEngine
+from .risk_assessor import RiskAssessmentFramework
+from .benchmark_engine import BenchmarkEngine
 
 __all__ = [
     'ScoringEngine',
@@ -22,7 +26,11 @@ __all__ = [
     'CostModeler',
     'TCOBreakdown',
     'ComplianceEngine',
-    'ComplianceFramework'
+    'ComplianceFramework',
+    'WhatIfScenarioEngine',
+    'PrioritizationRoadmapEngine',
+    'RiskAssessmentFramework',
+    'BenchmarkEngine'
 ]
 
 

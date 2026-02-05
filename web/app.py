@@ -16,7 +16,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from database.models import db, Portfolio, Application, ChatSession, ComplianceResult, CostAnalysis
 from ai_core.chat_engine import AIChatEngine, ConversationMode, get_chat_engine
-from rationalization import RationalizationEngine, CostModeler, ComplianceEngine
+from rationalization import (
+    RationalizationEngine, CostModeler, ComplianceEngine,
+    WhatIfScenarioEngine, PrioritizationRoadmapEngine,
+    RiskAssessmentFramework, BenchmarkEngine
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -498,6 +502,339 @@ def compliance_page(portfolio_id):
                           applications=applications,
                           frameworks=frameworks,
                           compliance_data=compliance_data)
+
+
+# =============================================================================
+# WHAT-IF SCENARIO API
+# =============================================================================
+
+def _apps_to_whatif_format(applications):
+    """Convert application objects to What-If engine format."""
+    return [
+        {
+            'name': app.name,
+            'cost': app.cost or 0,
+            'tech_health': app.tech_health or 5,
+            'business_value': app.business_value or 5,
+            'security': app.security or 5,
+            'redundancy': app.redundancy or 0,
+            'category': app.category or 'Other'
+        }
+        for app in applications
+    ]
+
+
+@app.route('/api/portfolios/<portfolio_id>/whatif/scenarios', methods=['GET'])
+def get_recommended_scenarios(portfolio_id):
+    """Get recommended What-If scenarios for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_whatif_format(applications)
+    engine = WhatIfScenarioEngine(app_dicts)
+    recommendations = engine.get_recommended_scenarios()
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'baseline': engine.baseline,
+        'recommended_scenarios': recommendations
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/whatif/simulate', methods=['POST'])
+def simulate_scenario(portfolio_id):
+    """Simulate a What-If scenario."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    data = request.get_json()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_whatif_format(applications)
+    engine = WhatIfScenarioEngine(app_dicts)
+
+    scenario_type = data.get('type', 'retire')
+
+    if scenario_type == 'retire':
+        app_names = data.get('apps', [])
+        result = engine.simulate_retirement(app_names)
+    elif scenario_type == 'modernize':
+        app_names = data.get('apps', [])
+        health_improvement = data.get('health_improvement', 3.0)
+        result = engine.simulate_modernization(app_names, health_improvement)
+    elif scenario_type == 'consolidate':
+        app_groups = data.get('app_groups', [])
+        cost_reduction = data.get('cost_reduction', 0.30)
+        result = engine.simulate_consolidation(app_groups, cost_reduction)
+    elif scenario_type == 'combined':
+        scenarios = data.get('scenarios', [])
+        result = engine.simulate_combined_scenario(scenarios)
+    else:
+        return jsonify({'error': f'Unknown scenario type: {scenario_type}'}), 400
+
+    return jsonify({
+        'success': True,
+        'scenario_result': result
+    })
+
+
+@app.route('/whatif/<portfolio_id>')
+def whatif_page(portfolio_id):
+    """What-If Scenario simulator page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('whatif.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# ROADMAP API
+# =============================================================================
+
+def _apps_to_roadmap_format(applications):
+    """Convert application objects to Roadmap engine format."""
+    return [
+        {
+            'name': app.name,
+            'cost': app.cost or 0,
+            'tech_health': app.tech_health or 5,
+            'business_value': app.business_value or 5,
+            'category': app.category or 'Other',
+            'description': app.description or ''
+        }
+        for app in applications
+    ]
+
+
+@app.route('/api/portfolios/<portfolio_id>/roadmap', methods=['GET'])
+def get_roadmap(portfolio_id):
+    """Get roadmap for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_roadmap_format(applications)
+    engine = PrioritizationRoadmapEngine(app_dicts)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'roadmap': engine.get_roadmap_summary()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/roadmap/full', methods=['GET'])
+def get_full_roadmap(portfolio_id):
+    """Get complete roadmap with all details."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_roadmap_format(applications)
+    engine = PrioritizationRoadmapEngine(app_dicts)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'executive_summary': engine.generate_executive_summary(),
+        'effort_impact_matrix': engine.get_effort_impact_matrix(),
+        'dependency_warnings': engine.get_dependency_warnings()
+    })
+
+
+@app.route('/roadmap/<portfolio_id>')
+def roadmap_page(portfolio_id):
+    """Roadmap planning page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('roadmap.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# RISK ASSESSMENT API
+# =============================================================================
+
+def _apps_to_risk_format(applications):
+    """Convert application objects to Risk Assessment format."""
+    return [
+        {
+            'name': app.name,
+            'cost': app.cost or 0,
+            'tech_health': app.tech_health or 5,
+            'business_value': app.business_value or 5,
+            'security': app.security or 5,
+            'category': app.category or 'Other',
+            'description': app.description or ''
+        }
+        for app in applications
+    ]
+
+
+@app.route('/api/portfolios/<portfolio_id>/risk', methods=['GET'])
+def get_risk_assessment(portfolio_id):
+    """Get risk assessment summary for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_risk_format(applications)
+    engine = RiskAssessmentFramework(app_dicts)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'risk_summary': engine.get_risk_summary()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/risk/full', methods=['GET'])
+def get_full_risk_assessment(portfolio_id):
+    """Get complete risk assessment with all details."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_risk_format(applications)
+    engine = RiskAssessmentFramework(app_dicts)
+    portfolio_results = engine.assess_portfolio()
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'portfolio_metrics': portfolio_results['portfolio_metrics'],
+        'risk_distribution': portfolio_results['risk_distribution'],
+        'priority_distribution': portfolio_results['priority_distribution'],
+        'high_risk_apps': portfolio_results['high_risk_apps'][:10],
+        'urgent_apps': portfolio_results['urgent_apps'],
+        'heatmap_data': engine.get_risk_heatmap_data()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/risk/compliance/<framework>', methods=['GET'])
+def get_risk_compliance(portfolio_id, framework):
+    """Get compliance check for a specific framework."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_risk_format(applications)
+    engine = RiskAssessmentFramework(app_dicts)
+    engine.assess_portfolio()
+
+    compliance_result = engine.check_compliance(framework)
+    return jsonify(compliance_result)
+
+
+@app.route('/api/applications/<app_id>/risk/mitigation', methods=['GET'])
+def get_mitigation_plan(app_id):
+    """Get risk mitigation plan for a specific application."""
+    application = Application.query.get_or_404(app_id)
+    portfolio = application.portfolio
+    applications = portfolio.applications.all()
+
+    app_dicts = _apps_to_risk_format(applications)
+    engine = RiskAssessmentFramework(app_dicts)
+    engine.assess_portfolio()
+
+    mitigation = engine.generate_mitigation_plan(application.name)
+    return jsonify(mitigation)
+
+
+@app.route('/risk/<portfolio_id>')
+def risk_page(portfolio_id):
+    """Risk assessment page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('risk.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# BENCHMARK API
+# =============================================================================
+
+def _apps_to_benchmark_format(applications):
+    """Convert application objects to Benchmark engine format."""
+    return [
+        {
+            'name': app.name,
+            'cost': app.cost or 0,
+            'tech_health': app.tech_health or 5,
+            'business_value': app.business_value or 5,
+            'category': app.category or 'Other'
+        }
+        for app in applications
+    ]
+
+
+@app.route('/api/portfolios/<portfolio_id>/benchmark', methods=['GET'])
+def get_benchmark(portfolio_id):
+    """Get benchmark summary for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_benchmark_format(applications)
+    engine = BenchmarkEngine(app_dicts)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'benchmark_summary': engine.get_benchmark_summary()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/benchmark/full', methods=['GET'])
+def get_full_benchmark(portfolio_id):
+    """Get comprehensive benchmark report."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    app_dicts = _apps_to_benchmark_format(applications)
+    engine = BenchmarkEngine(app_dicts)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'benchmark_report': engine.generate_benchmark_report()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/benchmark/best-practices', methods=['GET'])
+def get_best_practices(portfolio_id):
+    """Get best practices recommendations."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    category = request.args.get('category')
+
+    app_dicts = _apps_to_benchmark_format(applications) if applications else []
+    engine = BenchmarkEngine(app_dicts)
+
+    practices = engine.get_best_practices(category)
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'best_practices': practices
+    })
+
+
+@app.route('/benchmark/<portfolio_id>')
+def benchmark_page(portfolio_id):
+    """Benchmark comparison page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('benchmark.html', portfolio=portfolio, applications=applications)
 
 
 # =============================================================================

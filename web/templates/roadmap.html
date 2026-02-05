@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Roadmap - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-map me-2"></i>Rationalization Roadmap</h2>
+            <p class="text-muted">{{ portfolio.name }} - Prioritized implementation plan</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+            <button class="btn btn-primary" onclick="loadRoadmap()" id="loadBtn">
+                <i class="bi bi-arrows-fullscreen me-2"></i>Generate Roadmap
+            </button>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="row g-3 mb-4" id="summaryCards" style="display: none;">
+        <div class="col-md-2">
+            <div class="card text-center bg-primary bg-opacity-10">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold text-primary" id="totalActions">-</div>
+                    <small class="text-muted">Total Actions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center bg-success bg-opacity-10">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold text-success" id="totalSavings">-</div>
+                    <small class="text-muted">Est. Savings</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="quickWins">-</div>
+                    <small class="text-muted">Quick Wins</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-3 fw-bold" id="duration">-</div>
+                    <small class="text-muted">Duration (mo)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div id="actionBreakdown" class="d-flex justify-content-center gap-2">
+                        <!-- Filled by JS -->
+                    </div>
+                    <small class="text-muted">Action Breakdown</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Effort vs Impact Matrix -->
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Effort vs Impact Matrix</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="matrixChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Implementation Timeline</h6>
+                </div>
+                <div class="card-body p-0" id="timelineArea">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-calendar-event" style="font-size: 4rem;"></i>
+                        <p class="mt-3">Click "Generate Roadmap" to create a prioritized implementation plan</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Details -->
+    <div id="phaseDetails" class="mt-4" style="display: none;">
+        <!-- Filled by JS -->
+    </div>
+
+    <!-- Dependency Warnings -->
+    <div class="card mt-4" id="warningsCard" style="display: none;">
+        <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Dependency Warnings</h6>
+        </div>
+        <div class="card-body p-0" id="warningsList">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let matrixChart = null;
+
+document.addEventListener('DOMContentLoaded', loadRoadmap);
+
+async function loadRoadmap() {
+    const btn = document.getElementById('loadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/roadmap/full`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        displaySummary(data.executive_summary);
+        displayMatrix(data.effort_impact_matrix);
+        displayTimeline(data.executive_summary.timeline);
+        displayWarnings(data.dependency_warnings);
+
+    } catch (error) {
+        console.error('Error loading roadmap:', error);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrows-fullscreen me-2"></i>Generate Roadmap';
+    }
+}
+
+function displaySummary(summary) {
+    document.getElementById('summaryCards').style.display = 'flex';
+    document.getElementById('totalActions').textContent = summary.total_actions;
+    document.getElementById('totalSavings').textContent = '$' + (summary.total_savings / 1000).toFixed(0) + 'k';
+    document.getElementById('quickWins').textContent = summary.quick_wins_count;
+    document.getElementById('duration').textContent = Math.round(summary.duration_months);
+
+    // Action breakdown badges
+    const breakdown = summary.action_breakdown;
+    const colors = {retire: 'danger', modernize: 'success', consolidate: 'primary'};
+    document.getElementById('actionBreakdown').innerHTML = Object.entries(breakdown).map(([type, count]) =>
+        `<span class="badge bg-${colors[type] || 'secondary'}">${type}: ${count}</span>`
+    ).join('');
+}
+
+function displayMatrix(matrixData) {
+    const ctx = document.getElementById('matrixChart').getContext('2d');
+
+    if (matrixChart) matrixChart.destroy();
+
+    const colors = {
+        'Quick Wins': 'rgba(16, 185, 129, 0.8)',
+        'Strategic Priorities': 'rgba(59, 130, 246, 0.8)',
+        'Low Priority': 'rgba(156, 163, 175, 0.8)',
+        'Reconsider': 'rgba(239, 68, 68, 0.8)'
+    };
+
+    matrixChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: Object.keys(colors).map(quadrant => ({
+                label: quadrant,
+                data: matrixData
+                    .filter(d => d.quadrant === quadrant)
+                    .map(d => ({x: d.effort, y: d.impact, label: d.app_name, type: d.action_type})),
+                backgroundColor: colors[quadrant],
+                pointRadius: 8
+            }))
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {display: true, text: 'Effort →'},
+                    min: 0, max: 100,
+                    grid: {color: (ctx) => ctx.tick.value === 40 ? '#ccc' : '#eee'}
+                },
+                y: {
+                    title: {display: true, text: 'Impact →'},
+                    min: 0, max: 100,
+                    grid: {color: (ctx) => ctx.tick.value === 60 ? '#ccc' : '#eee'}
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.raw.label} (${ctx.raw.type})`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function displayTimeline(timeline) {
+    const html = timeline.map((phase, i) => `
+        <div class="border-bottom p-3 ${i === 0 ? 'bg-success bg-opacity-10' : ''}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="fs-5 me-2">${phase.icon}</span>
+                    <strong>${phase.name}</strong>
+                    <span class="badge bg-secondary ms-2">${phase.total_actions} actions</span>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold text-success">$${(phase.total_savings / 1000).toFixed(0)}k savings</div>
+                    <small class="text-muted">${phase.start_date} → ${phase.end_date}</small>
+                </div>
+            </div>
+            <p class="text-muted mb-0 mt-1 small">${phase.description}</p>
+        </div>
+    `).join('');
+
+    document.getElementById('timelineArea').innerHTML = html || '<div class="text-center text-muted py-5">No actions to plan</div>';
+
+    // Phase details
+    const detailsHtml = timeline.filter(p => p.total_actions > 0).map(phase => `
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">${phase.icon} ${phase.name} - ${phase.total_actions} Actions</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Application</th>
+                            <th>Action</th>
+                            <th class="text-end">Effort</th>
+                            <th class="text-end">Impact</th>
+                            <th class="text-end">Est. Savings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${phase.actions.map(a => `
+                            <tr>
+                                <td>${a.app_name}</td>
+                                <td><span class="badge bg-${a.action_type === 'retire' ? 'danger' : a.action_type === 'modernize' ? 'success' : 'primary'}">${a.action_type}</span></td>
+                                <td class="text-end">${a.effort.toFixed(0)}</td>
+                                <td class="text-end">${a.impact.toFixed(0)}</td>
+                                <td class="text-end text-success">$${(a.estimated_savings / 1000).toFixed(0)}k</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('phaseDetails').innerHTML = detailsHtml;
+    document.getElementById('phaseDetails').style.display = detailsHtml ? 'block' : 'none';
+}
+
+function displayWarnings(warnings) {
+    const card = document.getElementById('warningsCard');
+    const list = document.getElementById('warningsList');
+
+    if (warnings && warnings.length > 0) {
+        card.style.display = 'block';
+        list.innerHTML = `
+            <table class="table table-sm mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Application</th>
+                        <th>Blocked By</th>
+                        <th>Severity</th>
+                        <th>Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${warnings.map(w => `
+                        <tr>
+                            <td>${w.app_name}</td>
+                            <td><strong>${w.blocked_by}</strong></td>
+                            <td><span class="badge bg-${w.severity === 'high' ? 'danger' : 'warning'}">${w.severity}</span></td>
+                            <td><small>${w.recommendation}</small></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } else {
+        card.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

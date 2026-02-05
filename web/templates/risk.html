@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Assessment - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-shield-exclamation me-2"></i>Risk Assessment</h2>
+            <p class="text-muted">{{ portfolio.name }} - Multi-dimensional risk analysis</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+            <button class="btn btn-primary" onclick="loadRiskAssessment()" id="loadBtn">
+                <i class="bi bi-shield-check me-2"></i>Run Assessment
+            </button>
+        </div>
+    </div>
+
+    <!-- Portfolio Risk Summary -->
+    <div class="row g-3 mb-4" id="summaryCards" style="display: none;">
+        <div class="col-md-3">
+            <div class="card text-center" id="avgRiskCard">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold" id="avgRiskScore">-</div>
+                    <small class="text-muted">Average Risk Score</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-danger bg-opacity-10">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold text-danger" id="highRiskCount">-</div>
+                    <small class="text-muted">High/Critical Risk Apps</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning bg-opacity-10">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold text-warning" id="urgentCount">-</div>
+                    <small class="text-muted">Urgent Priority</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-3">
+                    <div class="fs-2 fw-bold" id="totalApps">{{ applications|length }}</div>
+                    <small class="text-muted">Applications Assessed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Risk Distribution -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Risk Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="riskDistChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-circle me-2"></i>Priority Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="priorityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Heatmap -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-grid-3x3 me-2"></i>Risk Heatmap (Business Value vs Risk)</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="heatmapChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- High Risk Applications -->
+    <div class="card mt-4" id="highRiskCard" style="display: none;">
+        <div class="card-header bg-danger text-white">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>High Risk Applications</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Application</th>
+                            <th class="text-center">Risk Level</th>
+                            <th class="text-center">Score</th>
+                            <th class="text-center">Priority</th>
+                            <th>Top Risk Factors</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="highRiskTable">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Dimensions Breakdown -->
+    <div class="card mt-4" id="dimensionsCard" style="display: none;">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-layers me-2"></i>Risk Dimensions Analysis</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3" id="dimensionCards">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mitigation Modal -->
+<div class="modal fade" id="mitigationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tools me-2"></i>Mitigation Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="mitigationContent">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let riskDistChart = null;
+let priorityChart = null;
+let heatmapChart = null;
+
+document.addEventListener('DOMContentLoaded', loadRiskAssessment);
+
+async function loadRiskAssessment() {
+    const btn = document.getElementById('loadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Assessing...';
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/risk/full`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        displaySummary(data);
+        displayRiskDistribution(data.risk_distribution);
+        displayPriorityDistribution(data.priority_distribution);
+        displayHeatmap(data.heatmap_data);
+        displayHighRiskApps(data.high_risk_apps);
+
+    } catch (error) {
+        console.error('Error loading risk assessment:', error);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Run Assessment';
+    }
+}
+
+function displaySummary(data) {
+    document.getElementById('summaryCards').style.display = 'flex';
+
+    const avgScore = data.portfolio_metrics.avg_risk_score;
+    document.getElementById('avgRiskScore').textContent = avgScore.toFixed(1);
+
+    // Color the average risk card based on score
+    const avgCard = document.getElementById('avgRiskCard');
+    avgCard.classList.remove('bg-danger', 'bg-warning', 'bg-success');
+    if (avgScore >= 60) avgCard.classList.add('bg-danger', 'bg-opacity-10');
+    else if (avgScore >= 40) avgCard.classList.add('bg-warning', 'bg-opacity-10');
+    else avgCard.classList.add('bg-success', 'bg-opacity-10');
+
+    document.getElementById('highRiskCount').textContent = data.high_risk_apps?.length || 0;
+    document.getElementById('urgentCount').textContent = data.urgent_apps?.length || 0;
+    document.getElementById('totalApps').textContent = data.portfolio_metrics.total_applications;
+}
+
+function displayRiskDistribution(dist) {
+    const ctx = document.getElementById('riskDistChart').getContext('2d');
+    if (riskDistChart) riskDistChart.destroy();
+
+    const colors = {
+        critical: '#dc3545',
+        high: '#fd7e14',
+        medium: '#ffc107',
+        low: '#17a2b8',
+        minimal: '#28a745'
+    };
+
+    const labels = ['Critical', 'High', 'Medium', 'Low', 'Minimal'];
+    const data = labels.map(l => dist[l.toLowerCase()] || 0);
+
+    riskDistChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: Object.values(colors)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {position: 'bottom'}
+            }
+        }
+    });
+}
+
+function displayPriorityDistribution(dist) {
+    const ctx = document.getElementById('priorityChart').getContext('2d');
+    if (priorityChart) priorityChart.destroy();
+
+    const colors = {
+        urgent: '#dc3545',
+        high: '#fd7e14',
+        medium: '#ffc107',
+        low: '#28a745'
+    };
+
+    priorityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Urgent', 'High', 'Medium', 'Low'],
+            datasets: [{
+                data: ['urgent', 'high', 'medium', 'low'].map(p => dist[p] || 0),
+                backgroundColor: Object.values(colors)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {legend: {display: false}},
+            scales: {y: {beginAtZero: true}}
+        }
+    });
+}
+
+function displayHeatmap(data) {
+    const ctx = document.getElementById('heatmapChart').getContext('2d');
+    if (heatmapChart) heatmapChart.destroy();
+
+    const priorityColors = {
+        urgent: 'rgba(220, 53, 69, 0.8)',
+        high: 'rgba(253, 126, 20, 0.8)',
+        medium: 'rgba(255, 193, 7, 0.8)',
+        low: 'rgba(40, 167, 69, 0.8)'
+    };
+
+    const datasets = ['urgent', 'high', 'medium', 'low'].map(priority => ({
+        label: priority.charAt(0).toUpperCase() + priority.slice(1),
+        data: data.filter(d => d.mitigation_priority === priority)
+            .map(d => ({x: d.business_value, y: d.composite_risk, label: d.app_name})),
+        backgroundColor: priorityColors[priority],
+        pointRadius: 10
+    }));
+
+    heatmapChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {datasets},
+        options: {
+            responsive: true,
+            scales: {
+                x: {title: {display: true, text: 'Business Value →'}, min: 0, max: 10},
+                y: {title: {display: true, text: 'Risk Score →'}, min: 0, max: 100}
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {label: ctx => ctx.raw.label}
+                }
+            }
+        }
+    });
+}
+
+function displayHighRiskApps(apps) {
+    if (!apps || apps.length === 0) {
+        document.getElementById('highRiskCard').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('highRiskCard').style.display = 'block';
+
+    const levelColors = {critical: 'danger', high: 'warning'};
+    const priorityColors = {urgent: 'danger', high: 'warning', medium: 'info', low: 'success'};
+
+    document.getElementById('highRiskTable').innerHTML = apps.slice(0, 10).map(app => `
+        <tr>
+            <td><strong>${app.app_name}</strong></td>
+            <td class="text-center">
+                <span class="badge bg-${levelColors[app.risk_level] || 'secondary'}">${app.risk_level}</span>
+            </td>
+            <td class="text-center fw-bold">${app.composite_risk_score.toFixed(1)}</td>
+            <td class="text-center">
+                <span class="badge bg-${priorityColors[app.mitigation_priority]}">${app.mitigation_priority}</span>
+            </td>
+            <td>
+                ${app.risk_factors.slice(0, 3).map(f => `<small class="d-block text-muted">• ${f}</small>`).join('')}
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="showMitigation('${app.app_name}')">
+                    <i class="bi bi-tools"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    document.getElementById('dimensionsCard').style.display = 'block';
+
+    // Show dimension breakdown for worst app
+    if (apps[0]) {
+        const worst = apps[0];
+        const dimensions = [
+            {name: 'Technical', score: worst.technical_risk.technical_risk_score, icon: 'cpu'},
+            {name: 'Business', score: worst.business_risk.business_risk_score, icon: 'briefcase'},
+            {name: 'Security', score: worst.security_risk.security_risk_score, icon: 'shield'},
+            {name: 'Operational', score: worst.operational_risk.operational_risk_score, icon: 'gear'},
+            {name: 'Financial', score: worst.financial_risk.financial_risk_score, icon: 'currency-dollar'}
+        ];
+
+        document.getElementById('dimensionCards').innerHTML = dimensions.map(d => {
+            const color = d.score >= 60 ? 'danger' : d.score >= 40 ? 'warning' : 'success';
+            return `
+                <div class="col-md">
+                    <div class="card text-center">
+                        <div class="card-body py-3">
+                            <i class="bi bi-${d.icon} fs-4 text-${color}"></i>
+                            <div class="fs-4 fw-bold mt-2">${d.score.toFixed(0)}</div>
+                            <small class="text-muted">${d.name} Risk</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+async function showMitigation(appName) {
+    const apps = {{ applications | tojson | safe }};
+    const app = apps.find(a => a.name === appName);
+    if (!app) return;
+
+    try {
+        const response = await fetch(`/api/applications/${app.id}/risk/mitigation`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        const levelColors = {critical: 'danger', high: 'warning', medium: 'info', low: 'success'};
+        const priorityColors = {urgent: 'danger', high: 'warning', medium: 'info', low: 'success'};
+
+        document.getElementById('mitigationContent').innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">${data.app_name}</h5>
+                <div>
+                    <span class="badge bg-${levelColors[data.current_risk_level]}">${data.current_risk_level} risk</span>
+                    <span class="badge bg-${priorityColors[data.mitigation_priority]}">${data.mitigation_priority} priority</span>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Composite Risk Score: <strong>${data.composite_score.toFixed(1)}</strong>
+                | Estimated Remediation Cost: <strong>$${data.estimated_cost_reduction.toLocaleString()}</strong>
+            </div>
+
+            ${data.recommendations.length > 0 ? `
+                <h6 class="mt-4">Recommended Actions</h6>
+                <div class="list-group">
+                    ${data.recommendations.map(r => `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${r.area}</strong> - ${r.action}
+                                    <p class="text-muted mb-0 small">${r.rationale}</p>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-${priorityColors[r.priority]}">${r.priority}</span>
+                                    <br><small class="text-muted">${r.timeline}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '<p class="text-muted">No specific recommendations at this time.</p>'}
+        `;
+
+        new bootstrap.Modal(document.getElementById('mitigationModal')).show();
+
+    } catch (error) {
+        alert('Error loading mitigation plan: ' + error.message);
+    }
+}
+</script>
+{% endblock %}
