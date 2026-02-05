@@ -1,5 +1,28 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+<style>
+    .feature-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        border-color: #3b82f6;
+    }
+    .step-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .step-card:hover {
+        background-color: #e2e8f0 !important;
+        transform: scale(1.02);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Hero Section -->
 <div class="hero text-center">
@@ -24,43 +47,88 @@
     <!-- Features -->
     <div class="row g-4 mb-5">
         <div class="col-md-4">
-            <div class="card h-100 text-center p-4">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <i class="bi bi-calculator-fill text-primary" style="font-size: 3rem;"></i>
+            <a href="/dashboard" class="text-decoration-none">
+                <div class="card h-100 text-center p-4 feature-card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="bi bi-calculator-fill text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">7-Dimension Scoring</h5>
+                        <p class="card-text text-muted">
+                            Comprehensive scoring across business value, technical health, cost, usage, security, strategic fit, and redundancy.
+                        </p>
+                        <span class="btn btn-outline-primary btn-sm mt-2">View Dashboard</span>
                     </div>
-                    <h5 class="card-title">7-Dimension Scoring</h5>
-                    <p class="card-text text-muted">
-                        Comprehensive scoring across business value, technical health, cost, usage, security, strategic fit, and redundancy.
-                    </p>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-md-4">
-            <div class="card h-100 text-center p-4">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <i class="bi bi-grid-3x3 text-success" style="font-size: 3rem;"></i>
+            <a href="/dashboard" class="text-decoration-none">
+                <div class="card h-100 text-center p-4 feature-card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="bi bi-grid-3x3 text-success" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">TIME Framework</h5>
+                        <p class="card-text text-muted">
+                            Industry-standard categorization: Tolerate, Invest, Migrate, Eliminate. Clear quadrant-based decisions.
+                        </p>
+                        <span class="btn btn-outline-success btn-sm mt-2">View Results</span>
                     </div>
-                    <h5 class="card-title">TIME Framework</h5>
-                    <p class="card-text text-muted">
-                        Industry-standard categorization: Tolerate, Invest, Migrate, Eliminate. Clear quadrant-based decisions.
-                    </p>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-md-4">
-            <div class="card h-100 text-center p-4">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <i class="bi bi-robot text-info" style="font-size: 3rem;"></i>
+            <a href="/chat" class="text-decoration-none">
+                <div class="card h-100 text-center p-4 feature-card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="bi bi-robot text-info" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">AI Consultant</h5>
+                        <p class="card-text text-muted">
+                            Claude-powered conversations about your portfolio. Get expert guidance on rationalization strategy.
+                        </p>
+                        <span class="btn btn-outline-info btn-sm mt-2">Start Chat</span>
                     </div>
-                    <h5 class="card-title">AI Consultant</h5>
-                    <p class="card-text text-muted">
-                        Claude-powered conversations about your portfolio. Get expert guidance on rationalization strategy.
-                    </p>
                 </div>
-            </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- New Features Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-6">
+            <a href="/dashboard" class="text-decoration-none">
+                <div class="card h-100 text-center p-4 feature-card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="bi bi-currency-dollar text-warning" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Cost Optimization</h5>
+                        <p class="card-text text-muted">
+                            TCO breakdown, hidden cost identification, and savings opportunities. Find quick wins to reduce IT spending.
+                        </p>
+                        <span class="btn btn-outline-warning btn-sm mt-2">Analyze Costs</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="/dashboard" class="text-decoration-none">
+                <div class="card h-100 text-center p-4 feature-card">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="bi bi-shield-check text-danger" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Compliance Assessment</h5>
+                        <p class="card-text text-muted">
+                            Assess SOX, PCI-DSS, HIPAA, and GDPR compliance. Identify gaps and prioritize remediation.
+                        </p>
+                        <span class="btn btn-outline-danger btn-sm mt-2">Run Assessment</span>
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
 
@@ -74,25 +142,31 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4 text-center">
-                            <div class="p-3 bg-light rounded">
-                                <div class="badge bg-primary rounded-pill mb-2">Step 1</div>
-                                <h6>Create Portfolio</h6>
-                                <small class="text-muted">Add your applications</small>
-                            </div>
+                            <a href="/dashboard" class="text-decoration-none">
+                                <div class="p-3 bg-light rounded step-card">
+                                    <div class="badge bg-primary rounded-pill mb-2">Step 1</div>
+                                    <h6 class="text-dark">Create Portfolio</h6>
+                                    <small class="text-muted">Add your applications</small>
+                                </div>
+                            </a>
                         </div>
                         <div class="col-md-4 text-center">
-                            <div class="p-3 bg-light rounded">
-                                <div class="badge bg-primary rounded-pill mb-2">Step 2</div>
-                                <h6>Run Analysis</h6>
-                                <small class="text-muted">Automated scoring</small>
-                            </div>
+                            <a href="/dashboard" class="text-decoration-none">
+                                <div class="p-3 bg-light rounded step-card">
+                                    <div class="badge bg-primary rounded-pill mb-2">Step 2</div>
+                                    <h6 class="text-dark">Run Analysis</h6>
+                                    <small class="text-muted">Automated scoring</small>
+                                </div>
+                            </a>
                         </div>
                         <div class="col-md-4 text-center">
-                            <div class="p-3 bg-light rounded">
-                                <div class="badge bg-primary rounded-pill mb-2">Step 3</div>
-                                <h6>Get Insights</h6>
-                                <small class="text-muted">AI-powered guidance</small>
-                            </div>
+                            <a href="/chat" class="text-decoration-none">
+                                <div class="p-3 bg-light rounded step-card">
+                                    <div class="badge bg-primary rounded-pill mb-2">Step 3</div>
+                                    <h6 class="text-dark">Get Insights</h6>
+                                    <small class="text-muted">AI-powered guidance</small>
+                                </div>
+                            </a>
                         </div>
                     </div>
                     <div class="text-center mt-4">
