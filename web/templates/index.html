@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero text-center">
+    <div class="container">
+        <h1 class="display-4 mb-3">
+            <i class="bi bi-grid-3x3-gap-fill me-2"></i>App Rationalization Pro
+        </h1>
+        <p class="lead mb-4">AI-Powered Application Portfolio Optimization</p>
+        <p class="mb-4">Transform your IT portfolio with intelligent analysis. Reduce costs, eliminate redundancy, and modernize strategically.</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/dashboard" class="btn btn-light btn-lg">
+                <i class="bi bi-speedometer2 me-2"></i>View Dashboard
+            </a>
+            <a href="/chat" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-chat-dots me-2"></i>AI Consultant
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <!-- Features -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 text-center p-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="bi bi-calculator-fill text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">7-Dimension Scoring</h5>
+                    <p class="card-text text-muted">
+                        Comprehensive scoring across business value, technical health, cost, usage, security, strategic fit, and redundancy.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 text-center p-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="bi bi-grid-3x3 text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">TIME Framework</h5>
+                    <p class="card-text text-muted">
+                        Industry-standard categorization: Tolerate, Invest, Migrate, Eliminate. Clear quadrant-based decisions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 text-center p-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="bi bi-robot text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title">AI Consultant</h5>
+                    <p class="card-text text-muted">
+                        Claude-powered conversations about your portfolio. Get expert guidance on rationalization strategy.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Start -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightning-fill text-warning me-2"></i>Quick Start</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4 text-center">
+                            <div class="p-3 bg-light rounded">
+                                <div class="badge bg-primary rounded-pill mb-2">Step 1</div>
+                                <h6>Create Portfolio</h6>
+                                <small class="text-muted">Add your applications</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="p-3 bg-light rounded">
+                                <div class="badge bg-primary rounded-pill mb-2">Step 2</div>
+                                <h6>Run Analysis</h6>
+                                <small class="text-muted">Automated scoring</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="p-3 bg-light rounded">
+                                <div class="badge bg-primary rounded-pill mb-2">Step 3</div>
+                                <h6>Get Insights</h6>
+                                <small class="text-muted">AI-powered guidance</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button class="btn btn-success btn-lg" onclick="createDemo()">
+                            <i class="bi bi-magic me-2"></i>Create Demo Portfolio
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TIME Framework Explanation -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h4 class="text-center mb-4">The TIME Framework</h4>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success h-100">
+                <div class="card-body text-center">
+                    <span class="badge badge-invest fs-6 mb-2">INVEST</span>
+                    <p class="small text-muted mb-0">High value, good tech. Continue growing.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning h-100">
+                <div class="card-body text-center">
+                    <span class="badge badge-tolerate fs-6 mb-2">TOLERATE</span>
+                    <p class="small text-muted mb-0">High value, poor tech. Plan improvements.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary h-100">
+                <div class="card-body text-center">
+                    <span class="badge badge-migrate fs-6 mb-2">MIGRATE</span>
+                    <p class="small text-muted mb-0">Consider modernization or consolidation.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger h-100">
+                <div class="card-body text-center">
+                    <span class="badge badge-eliminate fs-6 mb-2">ELIMINATE</span>
+                    <p class="small text-muted mb-0">Low value. Retire to reduce costs.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function createDemo() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+
+    try {
+        const response = await fetch('/api/demo/create', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            window.location.href = '/portfolio/' + data.portfolio.id;
+        } else {
+            alert('Error creating demo: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-magic me-2"></i>Create Demo Portfolio';
+    }
+}
+</script>
+{% endblock %}

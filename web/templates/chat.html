@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}AI Consultant - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-chat-square-text me-2"></i>Conversation Mode</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div class="d-grid gap-2">
+                        <button class="mode-btn text-start active" data-mode="general" onclick="changeMode('general')">
+                            <i class="bi bi-chat me-2"></i>General Chat
+                        </button>
+                        <button class="mode-btn text-start" data-mode="portfolio_analysis" onclick="changeMode('portfolio_analysis')">
+                            <i class="bi bi-pie-chart me-2"></i>Portfolio Analysis
+                        </button>
+                        <button class="mode-btn text-start" data-mode="time_discussion" onclick="changeMode('time_discussion')">
+                            <i class="bi bi-grid-3x3 me-2"></i>TIME Discussion
+                        </button>
+                        <button class="mode-btn text-start" data-mode="recommendation_review" onclick="changeMode('recommendation_review')">
+                            <i class="bi bi-check2-square me-2"></i>Recommendations
+                        </button>
+                        <button class="mode-btn text-start" data-mode="roadmap_planning" onclick="changeMode('roadmap_planning')">
+                            <i class="bi bi-map me-2"></i>Roadmap Planning
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggested Prompts -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Suggested Prompts</h6>
+                </div>
+                <div class="card-body p-2" id="suggestedPrompts">
+                    <small class="text-muted">Start a conversation to see suggestions</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="col-md-9 col-lg-10">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="bi bi-robot me-2"></i>AI Portfolio Consultant
+                        </h5>
+                        <small class="text-muted">Powered by Claude</small>
+                    </div>
+                    {% if portfolio %}
+                    <span class="badge bg-primary">
+                        <i class="bi bi-folder me-1"></i>{{ portfolio.name }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="text-center py-5" id="welcomeMessage">
+                            <i class="bi bi-robot text-primary" style="font-size: 4rem;"></i>
+                            <h4 class="mt-3">Welcome to AI Portfolio Consultant</h4>
+                            <p class="text-muted">
+                                I can help you analyze your application portfolio, explain TIME categorizations,
+                                review recommendations, and plan your rationalization roadmap.
+                            </p>
+                            <button class="btn btn-primary" onclick="startChat()">
+                                <i class="bi bi-play-fill me-2"></i>Start Conversation
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-area" id="chatInputArea" style="display: none;">
+                        <form onsubmit="sendMessage(event)">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="messageInput"
+                                       placeholder="Ask about your portfolio, TIME categories, recommendations..."
+                                       autocomplete="off">
+                                <button class="btn btn-primary" type="submit" id="sendBtn">
+                                    <i class="bi bi-send-fill"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sessionId = null;
+let isStreaming = false;
+
+async function startChat() {
+    const portfolioId = '{{ portfolio.id if portfolio else "" }}';
+
+    try {
+        const response = await fetch('/api/chat/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                organization: '{{ portfolio.organization if portfolio else "Demo Organization" }}',
+                portfolio_id: portfolioId || null
+            })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+
+        sessionId = data.session_id;
+        document.getElementById('welcomeMessage').style.display = 'none';
+        document.getElementById('chatInputArea').style.display = 'block';
+        updateSuggestedPrompts(data.suggested_prompts);
+
+        // Add welcome message from assistant
+        addMessage('assistant', "Hello! I'm your AI Portfolio Consultant. I can help you with:\n\n" +
+            "- **Portfolio Analysis**: Understand your application health\n" +
+            "- **TIME Framework**: Explain why apps are categorized as Invest, Tolerate, Migrate, or Eliminate\n" +
+            "- **Recommendations**: Review and prioritize actions\n" +
+            "- **Roadmap Planning**: Create implementation timelines\n\n" +
+            "What would you like to explore?");
+
+    } catch (error) {
+        alert('Failed to start chat: ' + error.message);
+    }
+}
+
+async function sendMessage(event) {
+    event.preventDefault();
+
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    if (!message || isStreaming) return;
+
+    input.value = '';
+    addMessage('user', message);
+
+    isStreaming = true;
+    document.getElementById('sendBtn').disabled = true;
+
+    try {
+        const response = await fetch('/api/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // Create assistant message container
+        const messageDiv = addMessage('assistant', '', true);
+        let fullResponse = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const text = decoder.decode(value);
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+
+                        if (data.type === 'token') {
+                            fullResponse += data.content;
+                            messageDiv.innerHTML = formatMessage(fullResponse);
+                            scrollToBottom();
+                        } else if (data.type === 'done') {
+                            updateSuggestedPrompts(data.suggested_prompts);
+                        } else if (data.type === 'error') {
+                            messageDiv.innerHTML = '<span class="text-danger">' + data.content + '</span>';
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+    } catch (error) {
+        addMessage('assistant', 'Error: ' + error.message);
+    } finally {
+        isStreaming = false;
+        document.getElementById('sendBtn').disabled = false;
+    }
+}
+
+function addMessage(role, content, isStreaming = false) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `chat-message ${role} fade-in`;
+    div.innerHTML = isStreaming ? '<span class="spinner"></span>' : formatMessage(content);
+    container.appendChild(div);
+    scrollToBottom();
+    return div;
+}
+
+function formatMessage(text) {
+    // Simple markdown-like formatting
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>')
+        .replace(/- (.*?)(<br>|$)/g, '&bull; $1$2');
+}
+
+function scrollToBottom() {
+    const container = document.getElementById('chatMessages');
+    container.scrollTop = container.scrollHeight;
+}
+
+function updateSuggestedPrompts(prompts) {
+    const container = document.getElementById('suggestedPrompts');
+    if (!prompts || prompts.length === 0) {
+        container.innerHTML = '<small class="text-muted">No suggestions available</small>';
+        return;
+    }
+
+    container.innerHTML = prompts.map(prompt =>
+        `<button class="btn btn-sm btn-outline-secondary w-100 text-start mb-1" onclick="usePrompt('${prompt.replace(/'/g, "\\'")}')">
+            ${prompt}
+        </button>`
+    ).join('');
+}
+
+function usePrompt(prompt) {
+    document.getElementById('messageInput').value = prompt;
+    document.getElementById('messageInput').focus();
+}
+
+async function changeMode(mode) {
+    // Update UI
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+
+    if (!sessionId) return;
+
+    try {
+        const response = await fetch('/api/chat/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            updateSuggestedPrompts(data.suggested_prompts);
+            addMessage('assistant', `Switched to ${mode.replace('_', ' ')} mode. How can I help?`);
+        }
+    } catch (error) {
+        console.error('Error changing mode:', error);
+    }
+}
+</script>
+{% endblock %}

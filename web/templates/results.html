@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Results - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2>Rationalization Results</h2>
+            <p class="text-muted">{{ portfolio.name }} - {{ portfolio.organization or '' }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+            <a href="/chat?portfolio_id={{ portfolio.id }}" class="btn btn-primary">
+                <i class="bi bi-chat-dots me-2"></i>Discuss with AI
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <div class="fs-1 fw-bold">{{ portfolio.invest_count }}</div>
+                    <div>INVEST</div>
+                    <small>High value, continue growing</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning">
+                <div class="card-body text-center">
+                    <div class="fs-1 fw-bold">{{ portfolio.tolerate_count }}</div>
+                    <div>TOLERATE</div>
+                    <small>Accept & plan improvements</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <div class="fs-1 fw-bold">{{ portfolio.migrate_count }}</div>
+                    <div>MIGRATE</div>
+                    <small>Modernize or consolidate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <div class="fs-1 fw-bold">{{ portfolio.eliminate_count }}</div>
+                    <div>ELIMINATE</div>
+                    <small>Retire to reduce costs</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>TIME Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="timeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Score Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="scoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Applications by Category -->
+    <div class="row g-4">
+        <!-- INVEST -->
+        <div class="col-md-6">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-arrow-up-circle me-2"></i>INVEST ({{ portfolio.invest_count }})</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for app in applications if app.time_category == 'Invest' %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <div>
+                                <strong>{{ app.name }}</strong>
+                                <br><small class="text-muted">{{ app.recommendation or '' }}</small>
+                            </div>
+                            <span class="badge bg-success align-self-center">{{ "%.0f"|format(app.composite_score or 0) }}</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-muted">No applications</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOLERATE -->
+        <div class="col-md-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0"><i class="bi bi-pause-circle me-2"></i>TOLERATE ({{ portfolio.tolerate_count }})</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for app in applications if app.time_category == 'Tolerate' %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <div>
+                                <strong>{{ app.name }}</strong>
+                                <br><small class="text-muted">{{ app.recommendation or '' }}</small>
+                            </div>
+                            <span class="badge bg-warning align-self-center">{{ "%.0f"|format(app.composite_score or 0) }}</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-muted">No applications</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- MIGRATE -->
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-arrow-right-circle me-2"></i>MIGRATE ({{ portfolio.migrate_count }})</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for app in applications if app.time_category == 'Migrate' %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <div>
+                                <strong>{{ app.name }}</strong>
+                                <br><small class="text-muted">{{ app.recommendation or '' }}</small>
+                            </div>
+                            <span class="badge bg-primary align-self-center">{{ "%.0f"|format(app.composite_score or 0) }}</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-muted">No applications</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ELIMINATE -->
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="bi bi-x-circle me-2"></i>ELIMINATE ({{ portfolio.eliminate_count }})</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for app in applications if app.time_category == 'Eliminate' %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <div>
+                                <strong>{{ app.name }}</strong>
+                                <br><small class="text-muted">{{ app.recommendation or '' }}</small>
+                            </div>
+                            <span class="badge bg-danger align-self-center">{{ "%.0f"|format(app.composite_score or 0) }}</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-muted">No applications</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// TIME Distribution Chart
+new Chart(document.getElementById('timeChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Invest', 'Tolerate', 'Migrate', 'Eliminate'],
+        datasets: [{
+            data: [{{ portfolio.invest_count }}, {{ portfolio.tolerate_count }}, {{ portfolio.migrate_count }}, {{ portfolio.eliminate_count }}],
+            backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+    }
+});
+
+// Score Distribution Chart
+const scores = [{% for app in applications %}{{ app.composite_score or 0 }},{% endfor %}];
+const scoreRanges = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
+scores.forEach(s => {
+    if (s < 20) scoreRanges[0]++;
+    else if (s < 40) scoreRanges[1]++;
+    else if (s < 60) scoreRanges[2]++;
+    else if (s < 80) scoreRanges[3]++;
+    else scoreRanges[4]++;
+});
+
+new Chart(document.getElementById('scoreChart'), {
+    type: 'bar',
+    data: {
+        labels: ['0-20', '20-40', '40-60', '60-80', '80-100'],
+        datasets: [{
+            label: 'Applications',
+            data: scoreRanges,
+            backgroundColor: ['#ef4444', '#f59e0b', '#eab308', '#84cc16', '#10b981']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+</script>
+{% endblock %}
