@@ -1,0 +1,20 @@
+# Render Blueprint - App Rationalization Pro
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: app-rationalization-pro
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python -c "from web.app import app, db; app.app_context().push(); db.create_all()"
+    startCommand: gunicorn web.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: "False"
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: DATABASE_URL
+        sync: false  # Set manually after creating database
