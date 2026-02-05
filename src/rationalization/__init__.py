@@ -2,6 +2,7 @@
 Rationalization Module for App Rationalization Pro
 
 Core domain logic for application portfolio rationalization.
+Includes Government Edition engines for public sector needs.
 """
 
 from .scoring_engine import ScoringEngine, ScoringWeights
@@ -13,8 +14,15 @@ from .whatif_engine import WhatIfScenarioEngine
 from .roadmap_engine import PrioritizationRoadmapEngine
 from .risk_assessor import RiskAssessmentFramework
 from .benchmark_engine import BenchmarkEngine
+from .gov_scoring_engine import (
+    GovernmentScoringEngine,
+    GovernmentScoringWeights,
+    GovernmentSector,
+    DataSensitivity
+)
 
 __all__ = [
+    # Enterprise engines
     'ScoringEngine',
     'ScoringWeights',
     'TIMEFramework',
@@ -30,7 +38,12 @@ __all__ = [
     'WhatIfScenarioEngine',
     'PrioritizationRoadmapEngine',
     'RiskAssessmentFramework',
-    'BenchmarkEngine'
+    'BenchmarkEngine',
+    # Government Edition
+    'GovernmentScoringEngine',
+    'GovernmentScoringWeights',
+    'GovernmentSector',
+    'DataSensitivity'
 ]
 
 

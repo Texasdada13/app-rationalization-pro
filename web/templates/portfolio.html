@@ -225,6 +225,45 @@
                                 <option value="1">Yes</option>
                             </select>
                         </div>
+
+                        <!-- Government Edition Fields -->
+                        <div class="col-12"><hr><h6><i class="bi bi-bank me-2"></i>Government Dimensions (Optional)</h6></div>
+                        <div class="col-md-4">
+                            <label class="form-label">Citizen Impact (0-10)</label>
+                            <input type="number" class="form-control" id="appCitizenImpact" min="0" max="10" placeholder="5">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mission Criticality (0-10)</label>
+                            <input type="number" class="form-control" id="appMissionCrit" min="0" max="10" placeholder="5">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Interoperability (0-10)</label>
+                            <input type="number" class="form-control" id="appInterop" min="0" max="10" placeholder="5">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Data Sensitivity</label>
+                            <select class="form-select" id="appDataSensitivity">
+                                <option value="">Not Specified</option>
+                                <option value="public">Public</option>
+                                <option value="sensitive">Sensitive</option>
+                                <option value="confidential">Confidential</option>
+                                <option value="restricted">Restricted</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">System of Record?</label>
+                            <select class="form-select" id="appSOR">
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Public Facing?</label>
+                            <select class="form-select" id="appPublicFacing">
+                                <option value="0">No</option>
+                                <option value="1">Yes</option>
+                            </select>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -255,6 +294,22 @@ async function addApplication() {
         usage: parseFloat(document.getElementById('appUsage').value),
         redundancy: parseInt(document.getElementById('appRedundancy').value)
     };
+
+    // Government Edition fields (optional)
+    const citizenImpact = document.getElementById('appCitizenImpact').value;
+    if (citizenImpact) data.citizen_impact = parseFloat(citizenImpact);
+
+    const missionCrit = document.getElementById('appMissionCrit').value;
+    if (missionCrit) data.mission_criticality = parseFloat(missionCrit);
+
+    const interop = document.getElementById('appInterop').value;
+    if (interop) data.interoperability_score = parseFloat(interop);
+
+    const dataSensitivity = document.getElementById('appDataSensitivity').value;
+    if (dataSensitivity) data.data_sensitivity = dataSensitivity;
+
+    data.system_of_record = document.getElementById('appSOR').value === '1';
+    data.public_facing = document.getElementById('appPublicFacing').value === '1';
 
     try {
         const response = await fetch(`/api/portfolios/${portfolioId}/applications`, {

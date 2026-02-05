@@ -183,13 +183,24 @@ def create_application(portfolio_id):
         department=data.get('department'),
         vendor=data.get('vendor'),
         description=data.get('description'),
+        # Enterprise scoring criteria
         business_value=float(data.get('business_value', 5)),
         tech_health=float(data.get('tech_health', 5)),
         cost=float(data.get('cost', 0)),
         usage=float(data.get('usage', 0)),
         security=float(data.get('security', 5)),
         strategic_fit=float(data.get('strategic_fit', 5)),
-        redundancy=int(data.get('redundancy', 0))
+        redundancy=int(data.get('redundancy', 0)),
+        # Government Edition fields
+        citizen_impact=float(data['citizen_impact']) if data.get('citizen_impact') else None,
+        mission_criticality=float(data['mission_criticality']) if data.get('mission_criticality') else None,
+        interoperability_score=float(data['interoperability_score']) if data.get('interoperability_score') else None,
+        data_sensitivity=data.get('data_sensitivity'),
+        compliance_requirements=data.get('compliance_requirements'),
+        system_of_record=data.get('system_of_record', False),
+        public_facing=data.get('public_facing', False),
+        shared_service=data.get('shared_service', False),
+        grant_funded=data.get('grant_funded', False)
     )
 
     # Process through rationalization engine

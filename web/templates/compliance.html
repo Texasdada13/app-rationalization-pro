@@ -43,14 +43,48 @@
             <h6 class="mb-0"><i class="bi bi-collection me-2"></i>Select Compliance Framework</h6>
         </div>
         <div class="card-body">
-            <div class="row g-3">
-                {% for fw in frameworks %}
+            <!-- Enterprise Frameworks -->
+            <h6 class="text-muted mb-3"><i class="bi bi-building me-2"></i>Enterprise Frameworks</h6>
+            <div class="row g-3 mb-4">
+                {% for fw in frameworks if fw.name in ['SOX', 'PCI-DSS', 'HIPAA', 'GDPR'] %}
                 <div class="col-md-3">
                     <div class="card framework-card border-2 {% if compliance_data.get(fw.name) %}selected{% endif %}"
                          onclick="selectFramework('{{ fw.name }}')" id="fw-{{ fw.name }}">
                         <div class="card-body text-center py-3">
-                            <div class="fs-4 fw-bold">{{ fw.name }}</div>
+                            <div class="fs-5 fw-bold">{{ fw.name }}</div>
                             <small class="text-muted d-block">{{ fw.requirements_count }} requirements</small>
+                            {% if compliance_data.get(fw.name) %}
+                            <div class="mt-2">
+                                <span class="badge bg-success">
+                                    {{ "%.0f"|format(compliance_data[fw.name].avg_compliance) }}% Compliant
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Government Frameworks -->
+            <h6 class="text-muted mb-3"><i class="bi bi-bank me-2"></i>Government Frameworks</h6>
+            <div class="row g-3">
+                {% for fw in frameworks if fw.name in ['CJIS', 'FISMA', 'StateRAMP', 'TX-RAMP'] %}
+                <div class="col-md-3">
+                    <div class="card framework-card border-2 {% if compliance_data.get(fw.name) %}selected{% endif %}"
+                         onclick="selectFramework('{{ fw.name }}')" id="fw-{{ fw.name }}">
+                        <div class="card-body text-center py-3">
+                            <div class="fs-5 fw-bold">{{ fw.name }}</div>
+                            <small class="text-muted d-block">{{ fw.requirements_count }} requirements</small>
+                            {% if fw.name == 'CJIS' %}
+                            <small class="text-danger d-block"><i class="bi bi-shield-lock me-1"></i>Law Enforcement</small>
+                            {% elif fw.name == 'FISMA' %}
+                            <small class="text-primary d-block"><i class="bi bi-flag me-1"></i>Federal</small>
+                            {% elif fw.name == 'StateRAMP' %}
+                            <small class="text-info d-block"><i class="bi bi-cloud me-1"></i>State Cloud</small>
+                            {% elif fw.name == 'TX-RAMP' %}
+                            <small class="text-warning d-block"><i class="bi bi-star me-1"></i>Texas</small>
+                            {% endif %}
                             {% if compliance_data.get(fw.name) %}
                             <div class="mt-2">
                                 <span class="badge bg-success">

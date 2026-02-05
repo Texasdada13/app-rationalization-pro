@@ -1,6 +1,18 @@
 """
 Compliance Engine Module
-Security & Compliance Assessment for SOX, PCI-DSS, HIPAA, GDPR frameworks.
+Security & Compliance Assessment for enterprise and government compliance frameworks.
+
+Enterprise Frameworks:
+- SOX (Sarbanes-Oxley)
+- PCI-DSS (Payment Card Industry)
+- HIPAA (Healthcare)
+- GDPR (EU Data Protection)
+
+Government Frameworks:
+- CJIS (Criminal Justice Information Services)
+- FISMA (Federal Information Security)
+- StateRAMP/TX-RAMP (State Cloud Security)
+
 Ported from application-rationalization-tool without pandas dependency.
 """
 
@@ -201,6 +213,217 @@ class ComplianceEngine:
             framework="GDPR", category="Data Rights", severity="Critical", weight=1.7
         ))
         self.frameworks["GDPR"] = gdpr
+
+        # ============================================================
+        # GOVERNMENT COMPLIANCE FRAMEWORKS
+        # ============================================================
+
+        # CJIS (Criminal Justice Information Services) Security Policy
+        # Required for any system accessing FBI criminal justice databases
+        cjis = ComplianceFramework(
+            name="CJIS",
+            description="Criminal Justice Information Services Security Policy - Required for law enforcement systems"
+        )
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-001", name="Personnel Security",
+            description="Background screening for all personnel with access to CJI",
+            framework="CJIS", category="Personnel Security", severity="Critical", weight=2.0
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-002", name="Physical Protection",
+            description="Physical security controls for CJI access areas",
+            framework="CJIS", category="Physical Security", severity="Critical", weight=1.8
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-003", name="CJI Access Control",
+            description="Role-based access control for Criminal Justice Information",
+            framework="CJIS", category="Access Control", severity="Critical", weight=2.0
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-004", name="Audit and Accountability",
+            description="Comprehensive audit logging of all CJI access and activities",
+            framework="CJIS", category="Audit Trail", severity="Critical", weight=1.9
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-005", name="Advanced Authentication",
+            description="Multi-factor authentication for remote CJI access",
+            framework="CJIS", category="Access Control", severity="Critical", weight=2.0
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-006", name="Encryption",
+            description="FIPS 140-2 certified encryption for CJI at rest and in transit",
+            framework="CJIS", category="Data Security", severity="Critical", weight=2.0
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-007", name="Media Protection",
+            description="Controls for handling, storage, and disposal of CJI media",
+            framework="CJIS", category="Media Protection", severity="High", weight=1.6
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-008", name="Incident Response",
+            description="Security incident response and reporting procedures",
+            framework="CJIS", category="Incident Response", severity="Critical", weight=1.8
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-009", name="Security Awareness Training",
+            description="Annual security awareness training for all CJI personnel",
+            framework="CJIS", category="Training", severity="High", weight=1.5
+        ))
+        cjis.add_requirement(ComplianceRequirement(
+            id="CJIS-010", name="Configuration Management",
+            description="Baseline security configurations and change control",
+            framework="CJIS", category="Change Management", severity="High", weight=1.5
+        ))
+        self.frameworks["CJIS"] = cjis
+
+        # FISMA (Federal Information Security Management Act)
+        # Required for federal agencies and contractors
+        fisma = ComplianceFramework(
+            name="FISMA",
+            description="Federal Information Security Management Act - Federal agency cybersecurity requirements"
+        )
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-001", name="System Categorization",
+            description="Categorize information systems based on impact levels (Low/Moderate/High)",
+            framework="FISMA", category="Risk Management", severity="Critical", weight=1.8
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-002", name="Security Control Selection",
+            description="Select appropriate NIST SP 800-53 security controls",
+            framework="FISMA", category="Security Controls", severity="Critical", weight=1.9
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-003", name="Risk Assessment",
+            description="Conduct regular risk assessments of information systems",
+            framework="FISMA", category="Risk Management", severity="Critical", weight=1.8
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-004", name="Security Authorization (ATO)",
+            description="Obtain Authorization to Operate from authorizing official",
+            framework="FISMA", category="Authorization", severity="Critical", weight=2.0
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-005", name="Continuous Monitoring",
+            description="Implement continuous monitoring of security controls",
+            framework="FISMA", category="Monitoring", severity="Critical", weight=1.9
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-006", name="Plan of Action and Milestones",
+            description="Maintain POA&M for identified security weaknesses",
+            framework="FISMA", category="Remediation", severity="High", weight=1.6
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-007", name="Security Assessment",
+            description="Independent assessment of security control effectiveness",
+            framework="FISMA", category="Security Assessment", severity="Critical", weight=1.8
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-008", name="Incident Response",
+            description="Incident detection, reporting, and response procedures",
+            framework="FISMA", category="Incident Response", severity="Critical", weight=1.7
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-009", name="Contingency Planning",
+            description="Disaster recovery and business continuity planning",
+            framework="FISMA", category="Business Continuity", severity="High", weight=1.5
+        ))
+        fisma.add_requirement(ComplianceRequirement(
+            id="FISMA-010", name="System Security Plan",
+            description="Document system security posture and controls",
+            framework="FISMA", category="Documentation", severity="High", weight=1.5
+        ))
+        self.frameworks["FISMA"] = fisma
+
+        # StateRAMP (State Risk and Authorization Management Program)
+        # Cloud security for state and local government
+        stateramp = ComplianceFramework(
+            name="StateRAMP",
+            description="State Risk and Authorization Management Program - Cloud security for state/local government"
+        )
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-001", name="Cloud Security Assessment",
+            description="Third-party assessment of cloud service provider security",
+            framework="StateRAMP", category="Security Assessment", severity="Critical", weight=2.0
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-002", name="Data Residency",
+            description="Data stored within approved geographic boundaries",
+            framework="StateRAMP", category="Data Security", severity="Critical", weight=1.8
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-003", name="Access Control",
+            description="Identity and access management for cloud resources",
+            framework="StateRAMP", category="Access Control", severity="Critical", weight=1.9
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-004", name="Encryption Standards",
+            description="Data encryption at rest and in transit using approved algorithms",
+            framework="StateRAMP", category="Data Security", severity="Critical", weight=1.9
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-005", name="Vulnerability Management",
+            description="Regular vulnerability scanning and remediation",
+            framework="StateRAMP", category="Security Maintenance", severity="High", weight=1.6
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-006", name="Incident Management",
+            description="Cloud security incident detection and response",
+            framework="StateRAMP", category="Incident Response", severity="Critical", weight=1.7
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-007", name="Audit Logging",
+            description="Comprehensive logging of cloud activities",
+            framework="StateRAMP", category="Audit Trail", severity="High", weight=1.5
+        ))
+        stateramp.add_requirement(ComplianceRequirement(
+            id="SRAMP-008", name="Supply Chain Risk",
+            description="Third-party and supply chain risk management",
+            framework="StateRAMP", category="Risk Management", severity="High", weight=1.4
+        ))
+        self.frameworks["StateRAMP"] = stateramp
+
+        # TX-RAMP (Texas Risk and Authorization Management Program)
+        # Texas-specific cloud security requirements
+        txramp = ComplianceFramework(
+            name="TX-RAMP",
+            description="Texas Risk and Authorization Management Program - Texas state agency cloud requirements"
+        )
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-001", name="DIR Certification",
+            description="Texas Department of Information Resources certification",
+            framework="TX-RAMP", category="Authorization", severity="Critical", weight=2.0
+        ))
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-002", name="Data Classification",
+            description="Classify data per Texas Administrative Code requirements",
+            framework="TX-RAMP", category="Data Security", severity="Critical", weight=1.8
+        ))
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-003", name="Security Controls",
+            description="Implement TAC 202 security control standards",
+            framework="TX-RAMP", category="Security Controls", severity="Critical", weight=1.9
+        ))
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-004", name="Vendor Risk Assessment",
+            description="Assess and monitor cloud vendor security posture",
+            framework="TX-RAMP", category="Risk Management", severity="High", weight=1.6
+        ))
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-005", name="Texas Data Residency",
+            description="Confidential Texas data maintained per state requirements",
+            framework="TX-RAMP", category="Data Security", severity="Critical", weight=1.8
+        ))
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-006", name="Incident Notification",
+            description="Report security incidents to DIR within required timeframes",
+            framework="TX-RAMP", category="Incident Response", severity="Critical", weight=1.7
+        ))
+        txramp.add_requirement(ComplianceRequirement(
+            id="TXRAMP-007", name="Business Continuity",
+            description="Disaster recovery capabilities per state requirements",
+            framework="TX-RAMP", category="Business Continuity", severity="High", weight=1.5
+        ))
+        self.frameworks["TX-RAMP"] = txramp
 
     def assess_application(
         self,
@@ -413,6 +636,7 @@ class ComplianceEngine:
 
         # Add remediation actions
         remediation_actions = {
+            # Enterprise compliance categories
             'Data Security': 'Implement encryption and data protection controls',
             'Access Control': 'Deploy identity and access management solution',
             'Audit Trail': 'Enable comprehensive logging and monitoring',
@@ -423,7 +647,18 @@ class ComplianceEngine:
             'Data Rights': 'Implement data subject rights management system',
             'System Design': 'Redesign system with privacy by design principles',
             'Change Management': 'Establish formal change management process',
-            'Security Maintenance': 'Implement patch management and vulnerability scanning'
+            'Security Maintenance': 'Implement patch management and vulnerability scanning',
+            # Government compliance categories
+            'Personnel Security': 'Implement background check and clearance procedures',
+            'Physical Security': 'Enhance physical access controls and surveillance',
+            'Media Protection': 'Implement secure media handling and disposal procedures',
+            'Training': 'Develop and deliver security awareness training program',
+            'Risk Management': 'Conduct formal risk assessment and document findings',
+            'Security Controls': 'Implement required NIST 800-53 security controls',
+            'Authorization': 'Complete Authority to Operate (ATO) process',
+            'Remediation': 'Document and track security weaknesses in POA&M',
+            'Security Assessment': 'Schedule third-party security assessment',
+            'Documentation': 'Develop and maintain system security documentation'
         }
 
         for i, priority in enumerate(priorities[:10]):  # Top 10 priorities
