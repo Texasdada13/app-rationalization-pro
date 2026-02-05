@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Cost Analysis - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-currency-dollar me-2"></i>Cost Analysis</h2>
+            <p class="text-muted">{{ portfolio.name }} - {{ portfolio.organization or '' }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+            <button class="btn btn-success" onclick="runCostAnalysis()" id="analyzeBtn">
+                <i class="bi bi-calculator me-2"></i>Run Analysis
+            </button>
+        </div>
+    </div>
+
+    {% if analysis %}
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold">${{ "{:,.0f}".format(analysis.total_portfolio_cost or 0) }}</div>
+                    <small class="text-muted">Total Portfolio Cost</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-warning bg-opacity-10">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-warning">${{ "{:,.0f}".format(analysis.hidden_costs_total or 0) }}</div>
+                    <small class="text-muted">Hidden Costs Identified</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-success bg-opacity-10">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-success">${{ "{:,.0f}".format(analysis.potential_savings or 0) }}</div>
+                    <small class="text-muted">Potential Savings</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center bg-primary bg-opacity-10">
+                <div class="card-body">
+                    <div class="fs-2 fw-bold text-primary">{{ "%.1f"|format(analysis.savings_percentage or 0) }}%</div>
+                    <small class="text-muted">Savings Opportunity</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>TCO Breakdown</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="tcoChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-building me-2"></i>Cost by Department</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="deptChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Costs -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-eye-slash me-2"></i>Hidden Costs Identified</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th class="text-end">Estimated Cost</th>
+                            <th class="text-end">Potential Savings</th>
+                            <th>Recommendation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cost in analysis.hidden_cost_categories or [] %}
+                        <tr>
+                            <td><strong>{{ cost.category }}</strong></td>
+                            <td>{{ cost.description }}</td>
+                            <td class="text-end text-warning">${{ "{:,.0f}".format(cost.estimated_annual_cost or 0) }}</td>
+                            <td class="text-end text-success">${{ "{:,.0f}".format(cost.potential_savings or 0) }}</td>
+                            <td><small>{{ cost.recommendation }}</small></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No hidden costs identified</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Wins -->
+    {% if analysis.quick_wins %}
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0"><i class="bi bi-lightning me-2"></i>Quick Wins</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for win in analysis.quick_wins %}
+                <div class="col-md-6">
+                    <div class="border rounded p-3">
+                        <h6>{{ win.opportunity }}</h6>
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-app me-1"></i>{{ win.app_count }} applications
+                            <span class="badge bg-secondary ms-2">{{ win.effort }} Effort</span>
+                        </p>
+                        <div class="fs-4 fw-bold text-success">
+                            ${{ "{:,.0f}".format(win.potential_savings or 0) }}
+                        </div>
+                        <small class="text-muted">Potential savings</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Optimization Opportunities -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Optimization Roadmap</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Priority</th>
+                            <th>Category</th>
+                            <th class="text-end">Potential Savings</th>
+                            <th>Effort</th>
+                            <th>Timeframe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for opp in analysis.top_opportunities or [] %}
+                        <tr>
+                            <td>
+                                <span class="badge {% if opp.priority == 1 %}bg-danger{% elif opp.priority == 2 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    P{{ opp.priority }}
+                                </span>
+                            </td>
+                            <td><strong>{{ opp.category }}</strong></td>
+                            <td class="text-end text-success fw-bold">${{ "{:,.0f}".format(opp.potential_savings or 0) }}</td>
+                            <td>{{ opp.effort }}</td>
+                            <td>{{ opp.timeframe }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No opportunities identified</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- No Analysis Yet -->
+    <div class="text-center py-5">
+        <i class="bi bi-calculator text-muted" style="font-size: 5rem;"></i>
+        <h4 class="mt-4">No Cost Analysis Yet</h4>
+        <p class="text-muted">Run a cost analysis to identify hidden costs and optimization opportunities.</p>
+        <button class="btn btn-success btn-lg" onclick="runCostAnalysis()">
+            <i class="bi bi-play-fill me-2"></i>Run Cost Analysis
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+
+async function runCostAnalysis() {
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing...';
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/cost-analysis`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Analysis failed'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-calculator me-2"></i>Run Analysis';
+    }
+}
+
+{% if analysis %}
+// TCO Breakdown Chart
+const tcoData = {{ analysis.component_breakdown | tojson | safe if analysis.component_breakdown else '{}' }};
+if (Object.keys(tcoData).length > 0) {
+    new Chart(document.getElementById('tcoChart'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(tcoData).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
+            datasets: [{
+                data: Object.values(tcoData),
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'right' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.label}: $${ctx.raw.toLocaleString()}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Department Chart
+const deptData = {{ analysis.department_allocation | tojson | safe if analysis.department_allocation else '{}' }};
+if (deptData.departments && deptData.departments.length > 0) {
+    new Chart(document.getElementById('deptChart'), {
+        type: 'bar',
+        data: {
+            labels: deptData.departments.map(d => d.department),
+            datasets: [{
+                label: 'Total Cost',
+                data: deptData.departments.map(d => d.total_cost),
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `$${ctx.raw.toLocaleString()}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        callback: (v) => '$' + (v / 1000) + 'k'
+                    }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

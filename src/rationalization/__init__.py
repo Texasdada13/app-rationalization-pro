@@ -7,6 +7,8 @@ Core domain logic for application portfolio rationalization.
 from .scoring_engine import ScoringEngine, ScoringWeights
 from .time_framework import TIMEFramework, TIMECategory, TIMEThresholds
 from .recommendation_engine import RecommendationEngine, ActionType
+from .cost_modeler import CostModeler, TCOBreakdown
+from .compliance_engine import ComplianceEngine, ComplianceFramework
 
 __all__ = [
     'ScoringEngine',
@@ -16,7 +18,11 @@ __all__ = [
     'TIMEThresholds',
     'RecommendationEngine',
     'ActionType',
-    'RationalizationEngine'
+    'RationalizationEngine',
+    'CostModeler',
+    'TCOBreakdown',
+    'ComplianceEngine',
+    'ComplianceFramework'
 ]
 
 

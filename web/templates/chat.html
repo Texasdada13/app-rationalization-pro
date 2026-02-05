@@ -28,6 +28,12 @@
                         <button class="mode-btn text-start" data-mode="roadmap_planning" onclick="changeMode('roadmap_planning')">
                             <i class="bi bi-map me-2"></i>Roadmap Planning
                         </button>
+                        <button class="mode-btn text-start" data-mode="cost_optimization" onclick="changeMode('cost_optimization')">
+                            <i class="bi bi-currency-dollar me-2"></i>Cost Optimization
+                        </button>
+                        <button class="mode-btn text-start" data-mode="compliance_review" onclick="changeMode('compliance_review')">
+                            <i class="bi bi-shield-check me-2"></i>Compliance Review
+                        </button>
                     </div>
                 </div>
             </div>
@@ -128,7 +134,9 @@ async function startChat() {
             "- **Portfolio Analysis**: Understand your application health\n" +
             "- **TIME Framework**: Explain why apps are categorized as Invest, Tolerate, Migrate, or Eliminate\n" +
             "- **Recommendations**: Review and prioritize actions\n" +
-            "- **Roadmap Planning**: Create implementation timelines\n\n" +
+            "- **Roadmap Planning**: Create implementation timelines\n" +
+            "- **Cost Optimization**: Identify hidden costs and savings opportunities\n" +
+            "- **Compliance Review**: Assess SOX, PCI-DSS, HIPAA, GDPR compliance\n\n" +
             "What would you like to explore?");
 
     } catch (error) {

@@ -169,6 +169,98 @@ class Application(db.Model):
         self.recommendation_rationale = results.get('recommendation_rationale')
 
 
+class ComplianceResult(db.Model):
+    """Compliance assessment result for an application."""
+    __tablename__ = 'compliance_results'
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    application_id = db.Column(db.String(36), db.ForeignKey('applications.id'), nullable=False)
+    portfolio_id = db.Column(db.String(36), db.ForeignKey('portfolios.id'))
+
+    # Framework assessed
+    framework = db.Column(db.String(50), nullable=False)  # SOX, PCI-DSS, HIPAA, GDPR
+
+    # Results
+    compliance_percentage = db.Column(db.Float)
+    compliance_level = db.Column(db.String(50))  # Fully Compliant, Substantially Compliant, etc.
+    risk_level = db.Column(db.String(20))  # Low, Medium, High, Critical
+
+    # Counts
+    total_requirements = db.Column(db.Integer)
+    compliant_count = db.Column(db.Integer)
+    partial_count = db.Column(db.Integer)
+    non_compliant_count = db.Column(db.Integer)
+    critical_gaps_count = db.Column(db.Integer)
+
+    # Detailed results stored as JSON
+    requirement_results = db.Column(JSON)
+    gaps = db.Column(JSON)
+    critical_gaps = db.Column(JSON)
+
+    # Timestamps
+    assessed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'application_id': self.application_id,
+            'portfolio_id': self.portfolio_id,
+            'framework': self.framework,
+            'compliance_percentage': self.compliance_percentage,
+            'compliance_level': self.compliance_level,
+            'risk_level': self.risk_level,
+            'total_requirements': self.total_requirements,
+            'compliant_count': self.compliant_count,
+            'partial_count': self.partial_count,
+            'non_compliant_count': self.non_compliant_count,
+            'critical_gaps_count': self.critical_gaps_count,
+            'requirement_results': self.requirement_results,
+            'gaps': self.gaps,
+            'critical_gaps': self.critical_gaps,
+            'assessed_at': self.assessed_at.isoformat() if self.assessed_at else None
+        }
+
+
+class CostAnalysis(db.Model):
+    """Cost analysis result for a portfolio."""
+    __tablename__ = 'cost_analyses'
+
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    portfolio_id = db.Column(db.String(36), db.ForeignKey('portfolios.id'), nullable=False)
+
+    # Summary metrics
+    total_portfolio_cost = db.Column(db.Float)
+    hidden_costs_total = db.Column(db.Float)
+    potential_savings = db.Column(db.Float)
+    savings_percentage = db.Column(db.Float)
+
+    # Detailed breakdowns stored as JSON
+    component_breakdown = db.Column(JSON)  # TCO components
+    department_allocation = db.Column(JSON)
+    hidden_cost_categories = db.Column(JSON)
+    quick_wins = db.Column(JSON)
+    top_opportunities = db.Column(JSON)
+
+    # Timestamps
+    analyzed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'portfolio_id': self.portfolio_id,
+            'total_portfolio_cost': self.total_portfolio_cost,
+            'hidden_costs_total': self.hidden_costs_total,
+            'potential_savings': self.potential_savings,
+            'savings_percentage': self.savings_percentage,
+            'component_breakdown': self.component_breakdown,
+            'department_allocation': self.department_allocation,
+            'hidden_cost_categories': self.hidden_cost_categories,
+            'quick_wins': self.quick_wins,
+            'top_opportunities': self.top_opportunities,
+            'analyzed_at': self.analyzed_at.isoformat() if self.analyzed_at else None
+        }
+
+
 class ChatSession(db.Model):
     """Chat session for AI consultant conversations."""
     __tablename__ = 'chat_sessions'

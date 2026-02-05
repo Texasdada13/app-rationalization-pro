@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Compliance Assessment - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .framework-card {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .framework-card:hover {
+        border-color: #3b82f6 !important;
+    }
+    .framework-card.selected {
+        border-color: #3b82f6 !important;
+        background-color: #eff6ff;
+    }
+    .risk-critical { background-color: #fef2f2; border-left: 4px solid #ef4444; }
+    .risk-high { background-color: #fefce8; border-left: 4px solid #f59e0b; }
+    .risk-medium { background-color: #f0f9ff; border-left: 4px solid #3b82f6; }
+    .risk-low { background-color: #f0fdf4; border-left: 4px solid #10b981; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-shield-check me-2"></i>Compliance Assessment</h2>
+            <p class="text-muted">{{ portfolio.name }} - {{ portfolio.organization or '' }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/portfolio/{{ portfolio.id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Portfolio
+            </a>
+        </div>
+    </div>
+
+    <!-- Framework Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-collection me-2"></i>Select Compliance Framework</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for fw in frameworks %}
+                <div class="col-md-3">
+                    <div class="card framework-card border-2 {% if compliance_data.get(fw.name) %}selected{% endif %}"
+                         onclick="selectFramework('{{ fw.name }}')" id="fw-{{ fw.name }}">
+                        <div class="card-body text-center py-3">
+                            <div class="fs-4 fw-bold">{{ fw.name }}</div>
+                            <small class="text-muted d-block">{{ fw.requirements_count }} requirements</small>
+                            {% if compliance_data.get(fw.name) %}
+                            <div class="mt-2">
+                                <span class="badge bg-success">
+                                    {{ "%.0f"|format(compliance_data[fw.name].avg_compliance) }}% Compliant
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Framework Actions -->
+    <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-success" onclick="runAssessment()" id="assessBtn">
+            <i class="bi bi-play-fill me-2"></i>Run Assessment
+        </button>
+        <select class="form-select" style="width: auto;" id="frameworkSelect">
+            {% for fw in frameworks %}
+            <option value="{{ fw.name }}">{{ fw.name }} - {{ fw.description[:40] }}...</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if compliance_data %}
+    <!-- Compliance Summary -->
+    {% for fw_name, fw_data in compliance_data.items() %}
+    <div class="framework-results mb-4" id="results-{{ fw_name }}">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-shield me-2"></i>{{ fw_name }} Assessment Results</h5>
+                <span class="badge bg-primary">{{ "%.0f"|format(fw_data.avg_compliance) }}% Average Compliance</span>
+            </div>
+            <div class="card-body">
+                <!-- Risk Distribution -->
+                <div class="row g-3 mb-4">
+                    {% set risk_counts = {'Low': 0, 'Medium': 0, 'High': 0, 'Critical': 0} %}
+                    {% for a in fw_data.assessments %}
+                        {% if risk_counts.update({a.risk_level: risk_counts[a.risk_level] + 1}) %}{% endif %}
+                    {% endfor %}
+
+                    <div class="col-md-3">
+                        <div class="card risk-low">
+                            <div class="card-body text-center py-2">
+                                <div class="fs-3 fw-bold text-success">{{ risk_counts.Low }}</div>
+                                <small>Low Risk</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card risk-medium">
+                            <div class="card-body text-center py-2">
+                                <div class="fs-3 fw-bold text-primary">{{ risk_counts.Medium }}</div>
+                                <small>Medium Risk</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card risk-high">
+                            <div class="card-body text-center py-2">
+                                <div class="fs-3 fw-bold text-warning">{{ risk_counts.High }}</div>
+                                <small>High Risk</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card risk-critical">
+                            <div class="card-body text-center py-2">
+                                <div class="fs-3 fw-bold text-danger">{{ risk_counts.Critical }}</div>
+                                <small>Critical Risk</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Application Results Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Application</th>
+                                <th class="text-center">Compliance</th>
+                                <th class="text-center">Level</th>
+                                <th class="text-center">Risk</th>
+                                <th class="text-center">Compliant</th>
+                                <th class="text-center">Partial</th>
+                                <th class="text-center">Gaps</th>
+                                <th class="text-center">Critical</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assessment in fw_data.assessments %}
+                            <tr class="{% if assessment.risk_level == 'Critical' %}table-danger{% elif assessment.risk_level == 'High' %}table-warning{% endif %}">
+                                <td>
+                                    <strong>{{ assessment.application_id }}</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar {% if assessment.compliance_percentage >= 80 %}bg-success{% elif assessment.compliance_percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                             style="width: {{ assessment.compliance_percentage }}%;">
+                                            {{ "%.0f"|format(assessment.compliance_percentage) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <small>{{ assessment.compliance_level }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {% if assessment.risk_level == 'Critical' %}bg-danger{% elif assessment.risk_level == 'High' %}bg-warning{% elif assessment.risk_level == 'Medium' %}bg-primary{% else %}bg-success{% endif %}">
+                                        {{ assessment.risk_level }}
+                                    </span>
+                                </td>
+                                <td class="text-center text-success">{{ assessment.compliant_count }}</td>
+                                <td class="text-center text-warning">{{ assessment.partial_count }}</td>
+                                <td class="text-center text-danger">{{ assessment.non_compliant_count }}</td>
+                                <td class="text-center">
+                                    {% if assessment.critical_gaps_count > 0 %}
+                                    <span class="badge bg-danger">{{ assessment.critical_gaps_count }}</span>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- No Assessment Yet -->
+    <div class="text-center py-5">
+        <i class="bi bi-shield-exclamation text-muted" style="font-size: 5rem;"></i>
+        <h4 class="mt-4">No Compliance Assessments Yet</h4>
+        <p class="text-muted">Select a framework above and run an assessment to evaluate your portfolio's compliance posture.</p>
+        <div class="mt-3">
+            <small class="text-muted">Available frameworks:</small>
+            <div class="d-flex justify-content-center gap-2 mt-2">
+                {% for fw in frameworks %}
+                <span class="badge bg-secondary">{{ fw.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Framework Details Modal -->
+    <div class="modal fade" id="frameworkModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="frameworkModalTitle">Framework Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="frameworkModalBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let selectedFramework = 'SOX';
+
+function selectFramework(name) {
+    // Update UI
+    document.querySelectorAll('.framework-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('fw-' + name).classList.add('selected');
+    document.getElementById('frameworkSelect').value = name;
+    selectedFramework = name;
+}
+
+async function runAssessment() {
+    const framework = document.getElementById('frameworkSelect').value;
+    const btn = document.getElementById('assessBtn');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Assessing...';
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/compliance/${framework}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Assessment failed'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Run Assessment';
+    }
+}
+
+async function showFrameworkDetails(name) {
+    const modal = new bootstrap.Modal(document.getElementById('frameworkModal'));
+    document.getElementById('frameworkModalTitle').textContent = name + ' Framework';
+    document.getElementById('frameworkModalBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div></div>';
+    modal.show();
+
+    try {
+        const response = await fetch(`/api/compliance/frameworks/${name}`);
+        const data = await response.json();
+
+        let html = `<p class="text-muted">${data.description}</p>`;
+        html += `<p><strong>${data.total_requirements}</strong> total requirements</p>`;
+
+        html += '<div class="mb-3">';
+        html += `<span class="badge bg-danger me-1">Critical: ${data.severity_breakdown.Critical}</span>`;
+        html += `<span class="badge bg-warning me-1">High: ${data.severity_breakdown.High}</span>`;
+        html += `<span class="badge bg-primary me-1">Medium: ${data.severity_breakdown.Medium}</span>`;
+        html += `<span class="badge bg-secondary">Low: ${data.severity_breakdown.Low}</span>`;
+        html += '</div>';
+
+        html += '<h6>Requirements by Category</h6>';
+        for (const [category, reqs] of Object.entries(data.categories)) {
+            html += `<div class="mb-3">`;
+            html += `<strong>${category}</strong>`;
+            html += '<ul class="list-unstyled ms-3">';
+            for (const req of reqs) {
+                html += `<li><small>${req.id}: ${req.name} <span class="badge bg-${req.severity === 'Critical' ? 'danger' : req.severity === 'High' ? 'warning' : 'secondary'}">${req.severity}</span></small></li>`;
+            }
+            html += '</ul></div>';
+        }
+
+        document.getElementById('frameworkModalBody').innerHTML = html;
+    } catch (error) {
+        document.getElementById('frameworkModalBody').innerHTML = `<div class="alert alert-danger">Error loading framework: ${error.message}</div>`;
+    }
+}
+
+// Initialize
+document.querySelectorAll('.framework-card').forEach(card => {
+    card.addEventListener('dblclick', () => {
+        const name = card.id.replace('fw-', '');
+        showFrameworkDetails(name);
+    });
+});
+</script>
+{% endblock %}

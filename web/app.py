@@ -14,9 +14,9 @@ from flask import Flask, render_template, request, jsonify, session, Response
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from database.models import db, Portfolio, Application, ChatSession
+from database.models import db, Portfolio, Application, ChatSession, ComplianceResult, CostAnalysis
 from ai_core.chat_engine import AIChatEngine, ConversationMode, get_chat_engine
-from rationalization import RationalizationEngine
+from rationalization import RationalizationEngine, CostModeler, ComplianceEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -292,6 +292,212 @@ def analyze_portfolio(portfolio_id):
         'summary': results['summary'],
         'portfolio': portfolio.to_dict()
     })
+
+
+# =============================================================================
+# COST MODELER API
+# =============================================================================
+
+@app.route('/api/portfolios/<portfolio_id>/cost-analysis', methods=['GET'])
+def get_cost_analysis(portfolio_id):
+    """Get the latest cost analysis for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+
+    # Get latest analysis
+    analysis = CostAnalysis.query.filter_by(portfolio_id=portfolio_id).order_by(
+        CostAnalysis.analyzed_at.desc()
+    ).first()
+
+    if analysis:
+        return jsonify(analysis.to_dict())
+    return jsonify({'error': 'No cost analysis found. Run analysis first.'}), 404
+
+
+@app.route('/api/portfolios/<portfolio_id>/cost-analysis', methods=['POST'])
+def run_cost_analysis(portfolio_id):
+    """Run cost analysis on a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to analyze'}), 400
+
+    # Convert to list of dicts for cost modeler
+    app_dicts = [app.to_dict() for app in applications]
+
+    # Run cost analysis
+    cost_modeler = CostModeler(app_dicts)
+    tco_summary = cost_modeler.calculate_tco_breakdown()
+    cost_modeler.identify_hidden_costs()
+    optimization = cost_modeler.get_cost_optimization_summary()
+
+    # Save to database
+    analysis = CostAnalysis(
+        portfolio_id=portfolio_id,
+        total_portfolio_cost=optimization['current_portfolio_cost'],
+        hidden_costs_total=optimization['hidden_costs_total'],
+        potential_savings=optimization['potential_savings'],
+        savings_percentage=optimization['savings_percentage'],
+        component_breakdown=tco_summary['component_breakdown'],
+        department_allocation=optimization['department_allocation'],
+        hidden_cost_categories=optimization['hidden_cost_categories'],
+        quick_wins=optimization['quick_wins'],
+        top_opportunities=optimization['top_opportunities']
+    )
+
+    db.session.add(analysis)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'analysis': analysis.to_dict(),
+        'tco_summary': tco_summary
+    })
+
+
+@app.route('/costs/<portfolio_id>')
+def costs_page(portfolio_id):
+    """Cost analysis page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    # Get latest analysis if exists
+    analysis = CostAnalysis.query.filter_by(portfolio_id=portfolio_id).order_by(
+        CostAnalysis.analyzed_at.desc()
+    ).first()
+
+    return render_template('costs.html',
+                          portfolio=portfolio,
+                          applications=applications,
+                          analysis=analysis)
+
+
+# =============================================================================
+# COMPLIANCE ENGINE API
+# =============================================================================
+
+@app.route('/api/compliance/frameworks', methods=['GET'])
+def get_frameworks():
+    """Get list of available compliance frameworks."""
+    engine = ComplianceEngine()
+    return jsonify(engine.list_frameworks())
+
+
+@app.route('/api/compliance/frameworks/<framework_name>', methods=['GET'])
+def get_framework_details(framework_name):
+    """Get details of a specific compliance framework."""
+    engine = ComplianceEngine()
+    summary = engine.get_framework_summary(framework_name)
+    if 'error' in summary:
+        return jsonify(summary), 404
+    return jsonify(summary)
+
+
+@app.route('/api/portfolios/<portfolio_id>/compliance/<framework_name>', methods=['GET'])
+def get_compliance_results(portfolio_id, framework_name):
+    """Get compliance assessment results for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+
+    # Get all compliance results for this framework
+    results = ComplianceResult.query.filter_by(
+        portfolio_id=portfolio_id,
+        framework=framework_name
+    ).all()
+
+    if not results:
+        return jsonify({'error': 'No compliance assessment found. Run assessment first.'}), 404
+
+    return jsonify({
+        'framework': framework_name,
+        'portfolio_id': portfolio_id,
+        'assessments': [r.to_dict() for r in results]
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/compliance/<framework_name>', methods=['POST'])
+def run_compliance_assessment(portfolio_id, framework_name):
+    """Run compliance assessment on a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if not applications:
+        return jsonify({'error': 'No applications to assess'}), 400
+
+    # Convert to list of dicts
+    app_dicts = [app.to_dict() for app in applications]
+
+    # Run compliance assessment
+    engine = ComplianceEngine()
+    results = engine.batch_assess(app_dicts, framework_name)
+
+    if 'error' in results:
+        return jsonify(results), 400
+
+    # Clear old results for this framework
+    ComplianceResult.query.filter_by(
+        portfolio_id=portfolio_id,
+        framework=framework_name
+    ).delete()
+
+    # Save individual application results
+    for assessment in results['application_assessments']:
+        result = ComplianceResult(
+            application_id=assessment.get('application_id'),
+            portfolio_id=portfolio_id,
+            framework=framework_name,
+            compliance_percentage=assessment['compliance_percentage'],
+            compliance_level=assessment['compliance_level'],
+            risk_level=assessment['risk_level'],
+            total_requirements=assessment['total_requirements'],
+            compliant_count=assessment['compliant_count'],
+            partial_count=assessment['partial_count'],
+            non_compliant_count=assessment['non_compliant_count'],
+            critical_gaps_count=assessment['critical_gaps_count'],
+            requirement_results=assessment['requirement_results'],
+            gaps=assessment['gaps'],
+            critical_gaps=assessment['critical_gaps']
+        )
+        db.session.add(result)
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'framework': framework_name,
+        'portfolio_summary': results['portfolio_summary'],
+        'risk_distribution': results['risk_distribution'],
+        'remediation_priorities': results['remediation_priorities']
+    })
+
+
+@app.route('/compliance/<portfolio_id>')
+def compliance_page(portfolio_id):
+    """Compliance assessment page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    # Get all compliance results
+    engine = ComplianceEngine()
+    frameworks = engine.list_frameworks()
+
+    compliance_data = {}
+    for fw in frameworks:
+        fw_name = fw['name']
+        results = ComplianceResult.query.filter_by(
+            portfolio_id=portfolio_id,
+            framework=fw_name
+        ).all()
+        if results:
+            compliance_data[fw_name] = {
+                'assessments': [r.to_dict() for r in results],
+                'avg_compliance': sum(r.compliance_percentage for r in results) / len(results) if results else 0
+            }
+
+    return render_template('compliance.html',
+                          portfolio=portfolio,
+                          applications=applications,
+                          frameworks=frameworks,
+                          compliance_data=compliance_data)
 
 
 # =============================================================================

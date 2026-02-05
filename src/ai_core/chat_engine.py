@@ -25,6 +25,8 @@ class ConversationMode(Enum):
     TIME_DISCUSSION = "time_discussion"
     RECOMMENDATION_REVIEW = "recommendation_review"
     ROADMAP_PLANNING = "roadmap_planning"
+    COST_OPTIMIZATION = "cost_optimization"
+    COMPLIANCE_REVIEW = "compliance_review"
 
 
 @dataclass
@@ -82,6 +84,18 @@ class AIChatEngine:
             "What resources do we need for Phase 1?",
             "How should we sequence the retirements?",
             "What milestones should we target?"
+        ],
+        ConversationMode.COST_OPTIMIZATION: [
+            "Where can we reduce IT spending?",
+            "What are the hidden costs in our portfolio?",
+            "Calculate potential savings from retirement",
+            "Identify quick win cost reductions"
+        ],
+        ConversationMode.COMPLIANCE_REVIEW: [
+            "Assess our SOX compliance posture",
+            "Which apps have critical compliance gaps?",
+            "What's our PCI-DSS risk level?",
+            "Prioritize compliance remediation actions"
         ]
     }
 
@@ -109,7 +123,21 @@ Help them prioritize which actions to take first.""",
 You are helping create an application rationalization roadmap.
 Consider dependencies, risks, and resource requirements.
 Provide realistic timelines and clear milestones.
-Suggest a phased approach starting with quick wins."""
+Suggest a phased approach starting with quick wins.""",
+
+        ConversationMode.COST_OPTIMIZATION: """
+You are analyzing costs and identifying optimization opportunities.
+Consider Total Cost of Ownership (TCO) including licensing, support, infrastructure, and labor.
+Identify hidden costs like integration complexity, technical debt, and redundancy.
+Calculate potential savings and prioritize opportunities by effort vs impact.
+Be specific about dollar amounts and ROI timelines.""",
+
+        ConversationMode.COMPLIANCE_REVIEW: """
+You are assessing compliance posture against regulatory frameworks.
+Focus on SOX (financial controls), PCI-DSS (payment card security), HIPAA (healthcare data),
+and GDPR (data privacy) compliance requirements.
+Identify gaps, assess risk levels, and prioritize remediation actions.
+Consider the severity of non-compliance and potential regulatory penalties."""
     }
 
     def __init__(self, claude_client: Optional[ClaudeClient] = None):

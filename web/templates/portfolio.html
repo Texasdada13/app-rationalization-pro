@@ -17,9 +17,17 @@
             <a href="/chat?portfolio_id={{ portfolio.id }}" class="btn btn-primary">
                 <i class="bi bi-chat-dots me-2"></i>AI Consultant
             </a>
-            <a href="/results/{{ portfolio.id }}" class="btn btn-outline-primary">
-                <i class="bi bi-bar-chart me-2"></i>Results
-            </a>
+            <div class="btn-group">
+                <a href="/results/{{ portfolio.id }}" class="btn btn-outline-primary">
+                    <i class="bi bi-bar-chart me-2"></i>Results
+                </a>
+                <a href="/costs/{{ portfolio.id }}" class="btn btn-outline-warning">
+                    <i class="bi bi-currency-dollar me-2"></i>Costs
+                </a>
+                <a href="/compliance/{{ portfolio.id }}" class="btn btn-outline-info">
+                    <i class="bi bi-shield-check me-2"></i>Compliance
+                </a>
+            </div>
         </div>
     </div>
 
