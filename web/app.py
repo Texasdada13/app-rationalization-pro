@@ -14,12 +14,20 @@ from flask import Flask, render_template, request, jsonify, session, Response
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from database.models import db, Portfolio, Application, ChatSession, ComplianceResult, CostAnalysis
+from database.models import (
+    db, Portfolio, Application, ChatSession, ComplianceResult, CostAnalysis,
+    # Tier 2 models
+    ApplicationDependency, ApplicationIntegration, Vendor, VendorAssessment,
+    DependencyAnalysis, IntegrationAnalysis
+)
 from ai_core.chat_engine import AIChatEngine, ConversationMode, get_chat_engine
 from rationalization import (
     RationalizationEngine, CostModeler, ComplianceEngine,
     WhatIfScenarioEngine, PrioritizationRoadmapEngine,
-    RiskAssessmentFramework, BenchmarkEngine
+    RiskAssessmentFramework, BenchmarkEngine,
+    # Tier 2 engines
+    DependencyMapper, IntegrationAssessor, VendorRiskEngine,
+    create_demo_dependencies, create_demo_integrations, create_demo_vendors
 )
 
 # Configure logging
@@ -1037,6 +1045,744 @@ def create_demo_data():
 
 
 # =============================================================================
+# TIER 2: DEPENDENCY MAPPING API
+# =============================================================================
+
+@app.route('/api/portfolios/<portfolio_id>/dependencies', methods=['GET'])
+def get_dependencies(portfolio_id):
+    """Get all dependencies in a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    dependencies = ApplicationDependency.query.filter_by(portfolio_id=portfolio_id).all()
+    return jsonify([d.to_dict() for d in dependencies])
+
+
+@app.route('/api/portfolios/<portfolio_id>/dependencies', methods=['POST'])
+def create_dependency(portfolio_id):
+    """Create a new dependency between applications."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    data = request.get_json()
+
+    dependency = ApplicationDependency(
+        portfolio_id=portfolio_id,
+        source_app_id=data['source_app_id'],
+        target_app_id=data['target_app_id'],
+        dependency_type=data.get('dependency_type', 'data'),
+        strength=data.get('strength', 'medium'),
+        description=data.get('description'),
+        data_direction=data.get('data_direction', 'bidirectional'),
+        data_volume=data.get('data_volume'),
+        is_critical_path=data.get('is_critical_path', False),
+        failure_impact=data.get('failure_impact')
+    )
+
+    db.session.add(dependency)
+    db.session.commit()
+
+    return jsonify(dependency.to_dict()), 201
+
+
+@app.route('/api/dependencies/<dep_id>', methods=['DELETE'])
+def delete_dependency(dep_id):
+    """Delete a dependency."""
+    dependency = ApplicationDependency.query.get_or_404(dep_id)
+    db.session.delete(dependency)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/portfolios/<portfolio_id>/dependencies/analyze', methods=['POST'])
+def analyze_dependencies(portfolio_id):
+    """Run dependency analysis on a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    dependencies = ApplicationDependency.query.filter_by(portfolio_id=portfolio_id).all()
+
+    if not applications:
+        return jsonify({'error': 'No applications in portfolio'}), 400
+
+    # Build dependency mapper
+    mapper = DependencyMapper()
+
+    # Add applications as nodes
+    for app in applications:
+        mapper.add_application(app.id, app.name, {
+            'category': app.category,
+            'cost': app.cost,
+            'business_value': app.business_value
+        })
+
+    # Add dependencies as edges
+    for dep in dependencies:
+        mapper.add_dependency(
+            source_id=dep.source_app_id,
+            target_id=dep.target_app_id,
+            dep_type=dep.dependency_type or 'data',
+            strength=dep.strength or 'medium',
+            metadata={'description': dep.description}
+        )
+
+    # Run analysis
+    mapper.build_graph()
+    circular = mapper.find_circular_dependencies()
+    critical_paths = mapper.find_critical_paths()
+
+    # Calculate blast radius for each app
+    blast_radius = {}
+    for app in applications:
+        blast_radius[app.id] = mapper.calculate_blast_radius(app.id)
+
+    # Get visualization data
+    viz_data = mapper.get_visualization_data()
+
+    # Get hub and isolated apps
+    hub_apps = mapper.get_hub_applications(limit=5)
+    isolated = mapper.get_isolated_applications()
+
+    # Determine overall risk level
+    risk_level = 'low'
+    if len(circular) > 0:
+        risk_level = 'critical' if len(circular) > 3 else 'high'
+    elif len(critical_paths) > 5:
+        risk_level = 'medium'
+
+    # Generate recommendations
+    recommendations = []
+    if circular:
+        recommendations.append(f"CRITICAL: {len(circular)} circular dependencies detected - review and refactor")
+    if hub_apps:
+        top_hub = hub_apps[0]
+        recommendations.append(f"Monitor {top_hub.get('name', 'hub')} - it has {top_hub.get('total_connections', 0)} connections")
+    if isolated:
+        recommendations.append(f"{len(isolated)} applications have no dependencies - verify if correct")
+
+    # Save analysis to database
+    analysis = DependencyAnalysis(
+        portfolio_id=portfolio_id,
+        total_applications=len(applications),
+        total_dependencies=len(dependencies),
+        circular_dependency_count=len(circular),
+        critical_path_count=len(critical_paths),
+        circular_dependencies=circular,
+        critical_paths=critical_paths,
+        blast_radius_data=blast_radius,
+        dependency_graph=viz_data,
+        hub_applications=hub_apps,
+        isolated_applications=isolated,
+        overall_risk_level=risk_level,
+        recommendations=recommendations
+    )
+
+    db.session.add(analysis)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'analysis': analysis.to_dict()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/dependencies/visualization', methods=['GET'])
+def get_dependency_visualization(portfolio_id):
+    """Get dependency graph data for visualization."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    dependencies = ApplicationDependency.query.filter_by(portfolio_id=portfolio_id).all()
+
+    # Build nodes and edges for visualization
+    nodes = [{
+        'id': app.id,
+        'name': app.name,
+        'category': app.category,
+        'time_category': app.time_category,
+        'cost': app.cost
+    } for app in applications]
+
+    edges = [{
+        'source': dep.source_app_id,
+        'target': dep.target_app_id,
+        'type': dep.dependency_type,
+        'strength': dep.strength,
+        'is_critical': dep.is_critical_path
+    } for dep in dependencies]
+
+    return jsonify({
+        'nodes': nodes,
+        'edges': edges,
+        'total_nodes': len(nodes),
+        'total_edges': len(edges)
+    })
+
+
+@app.route('/dependencies/<portfolio_id>')
+def dependencies_page(portfolio_id):
+    """Dependency mapping page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('dependencies.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# TIER 2: INTEGRATION ASSESSMENT API
+# =============================================================================
+
+@app.route('/api/portfolios/<portfolio_id>/integrations', methods=['GET'])
+def get_integrations(portfolio_id):
+    """Get all integrations in a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    integrations = ApplicationIntegration.query.filter_by(portfolio_id=portfolio_id).all()
+    return jsonify([i.to_dict() for i in integrations])
+
+
+@app.route('/api/portfolios/<portfolio_id>/integrations', methods=['POST'])
+def create_integration(portfolio_id):
+    """Create a new integration."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    data = request.get_json()
+
+    integration = ApplicationIntegration(
+        portfolio_id=portfolio_id,
+        source_app_id=data['source_app_id'],
+        target_app_id=data.get('target_app_id'),
+        external_system=data.get('external_system'),
+        integration_type=data.get('integration_type', 'api'),
+        protocol=data.get('protocol'),
+        auth_method=data.get('auth_method'),
+        data_sensitivity=data.get('data_sensitivity', 'internal'),
+        data_types=data.get('data_types'),
+        avg_latency_ms=data.get('avg_latency_ms'),
+        error_rate_percent=data.get('error_rate_percent'),
+        uptime_percent=data.get('uptime_percent', 99.0),
+        daily_transactions=data.get('daily_transactions'),
+        sync_frequency=data.get('sync_frequency'),
+        has_retry_mechanism=data.get('has_retry_mechanism', False),
+        has_error_handling=data.get('has_error_handling', False),
+        has_monitoring=data.get('has_monitoring', False),
+        documentation_url=data.get('documentation_url'),
+        owner=data.get('owner'),
+        notes=data.get('notes')
+    )
+
+    # Calculate health score
+    integration.calculate_health_score()
+
+    db.session.add(integration)
+    db.session.commit()
+
+    return jsonify(integration.to_dict()), 201
+
+
+@app.route('/api/integrations/<int_id>', methods=['PUT'])
+def update_integration(int_id):
+    """Update an integration."""
+    integration = ApplicationIntegration.query.get_or_404(int_id)
+    data = request.get_json()
+
+    # Update fields
+    updatable_fields = [
+        'integration_type', 'protocol', 'auth_method', 'data_sensitivity',
+        'data_types', 'avg_latency_ms', 'error_rate_percent', 'uptime_percent',
+        'daily_transactions', 'sync_frequency', 'has_retry_mechanism',
+        'has_error_handling', 'has_monitoring', 'documentation_url', 'owner', 'notes'
+    ]
+
+    for field in updatable_fields:
+        if field in data:
+            setattr(integration, field, data[field])
+
+    # Recalculate health score
+    integration.calculate_health_score()
+
+    db.session.commit()
+
+    return jsonify(integration.to_dict())
+
+
+@app.route('/api/integrations/<int_id>', methods=['DELETE'])
+def delete_integration(int_id):
+    """Delete an integration."""
+    integration = ApplicationIntegration.query.get_or_404(int_id)
+    db.session.delete(integration)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/portfolios/<portfolio_id>/integrations/analyze', methods=['POST'])
+def analyze_integrations(portfolio_id):
+    """Run integration health analysis on a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    integrations = ApplicationIntegration.query.filter_by(portfolio_id=portfolio_id).all()
+
+    if not integrations:
+        return jsonify({'error': 'No integrations in portfolio'}), 400
+
+    # Calculate health scores for all integrations
+    for integration in integrations:
+        integration.calculate_health_score()
+    db.session.commit()
+
+    # Aggregate statistics
+    total = len(integrations)
+    healthy = sum(1 for i in integrations if i.health_status == 'healthy')
+    degraded = sum(1 for i in integrations if i.health_status == 'degraded')
+    unhealthy = sum(1 for i in integrations if i.health_status == 'unhealthy')
+    critical = sum(1 for i in integrations if i.health_status == 'critical')
+
+    avg_health = sum(i.health_score or 0 for i in integrations) / total if total > 0 else 0
+
+    # Group by data sensitivity
+    sensitivity_breakdown = {}
+    for integration in integrations:
+        sens = integration.data_sensitivity or 'unknown'
+        if sens not in sensitivity_breakdown:
+            sensitivity_breakdown[sens] = {'count': 0, 'avg_health': 0, 'scores': []}
+        sensitivity_breakdown[sens]['count'] += 1
+        sensitivity_breakdown[sens]['scores'].append(integration.health_score or 0)
+
+    for sens in sensitivity_breakdown:
+        scores = sensitivity_breakdown[sens]['scores']
+        sensitivity_breakdown[sens]['avg_health'] = sum(scores) / len(scores) if scores else 0
+        del sensitivity_breakdown[sens]['scores']
+
+    # Group by integration type
+    type_breakdown = {}
+    for integration in integrations:
+        int_type = integration.integration_type or 'unknown'
+        if int_type not in type_breakdown:
+            type_breakdown[int_type] = {'count': 0, 'avg_health': 0, 'scores': []}
+        type_breakdown[int_type]['count'] += 1
+        type_breakdown[int_type]['scores'].append(integration.health_score or 0)
+
+    for int_type in type_breakdown:
+        scores = type_breakdown[int_type]['scores']
+        type_breakdown[int_type]['avg_health'] = sum(scores) / len(scores) if scores else 0
+        del type_breakdown[int_type]['scores']
+
+    # Identify high-risk integrations (critical or unhealthy with sensitive data)
+    high_risk = [
+        i.to_dict() for i in integrations
+        if i.health_status in ('critical', 'unhealthy') and
+           i.data_sensitivity in ('confidential', 'restricted', 'pii')
+    ]
+
+    # Identify bottlenecks (high transaction count with degraded health)
+    bottlenecks = [
+        i.to_dict() for i in integrations
+        if (i.daily_transactions or 0) > 1000 and i.health_status in ('degraded', 'unhealthy', 'critical')
+    ]
+
+    # Determine overall health
+    overall_health = 'healthy'
+    if critical > 0:
+        overall_health = 'critical'
+    elif unhealthy > total * 0.2:
+        overall_health = 'unhealthy'
+    elif degraded > total * 0.3:
+        overall_health = 'degraded'
+
+    # Generate recommendations
+    recommendations = []
+    if critical > 0:
+        recommendations.append(f"URGENT: {critical} integrations in critical state - immediate attention required")
+    if high_risk:
+        recommendations.append(f"{len(high_risk)} high-risk integrations with sensitive data need remediation")
+    if bottlenecks:
+        recommendations.append(f"{len(bottlenecks)} high-volume integrations showing performance issues")
+
+    # Check for missing operational controls
+    no_monitoring = sum(1 for i in integrations if not i.has_monitoring)
+    if no_monitoring > total * 0.5:
+        recommendations.append(f"{no_monitoring} integrations lack monitoring - implement observability")
+
+    # Save analysis
+    analysis = IntegrationAnalysis(
+        portfolio_id=portfolio_id,
+        total_integrations=total,
+        healthy_count=healthy,
+        degraded_count=degraded,
+        unhealthy_count=unhealthy,
+        critical_count=critical,
+        average_health_score=round(avg_health, 2),
+        integration_scores=[i.to_dict() for i in integrations],
+        bottlenecks=bottlenecks,
+        high_risk_integrations=high_risk,
+        data_sensitivity_breakdown=sensitivity_breakdown,
+        integration_type_breakdown=type_breakdown,
+        overall_health=overall_health,
+        recommendations=recommendations
+    )
+
+    db.session.add(analysis)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'analysis': analysis.to_dict()
+    })
+
+
+@app.route('/integrations/<portfolio_id>')
+def integrations_page(portfolio_id):
+    """Integration assessment page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('integrations.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# TIER 2: VENDOR RISK MANAGEMENT API
+# =============================================================================
+
+@app.route('/api/portfolios/<portfolio_id>/vendors', methods=['GET'])
+def get_vendors(portfolio_id):
+    """Get all vendors for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    vendors = Vendor.query.filter_by(portfolio_id=portfolio_id).all()
+    return jsonify([v.to_dict() for v in vendors])
+
+
+@app.route('/api/portfolios/<portfolio_id>/vendors', methods=['POST'])
+def create_vendor(portfolio_id):
+    """Create a new vendor."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    data = request.get_json()
+
+    vendor = Vendor(
+        portfolio_id=portfolio_id,
+        name=data['name'],
+        tier=data.get('tier', 'tactical'),
+        status=data.get('status', 'active'),
+        annual_revenue=data.get('annual_revenue'),
+        years_in_business=data.get('years_in_business'),
+        financial_rating=data.get('financial_rating'),
+        publicly_traded=data.get('publicly_traded', False),
+        stock_symbol=data.get('stock_symbol'),
+        contract_start=datetime.strptime(data['contract_start'], '%Y-%m-%d').date() if data.get('contract_start') else None,
+        contract_end=datetime.strptime(data['contract_end'], '%Y-%m-%d').date() if data.get('contract_end') else None,
+        annual_spend=data.get('annual_spend', 0),
+        payment_terms=data.get('payment_terms', 'NET30'),
+        contract_type=data.get('contract_type'),
+        auto_renewal=data.get('auto_renewal', False),
+        security_score=data.get('security_score'),
+        compliances=data.get('compliances', []),
+        last_security_audit=datetime.strptime(data['last_security_audit'], '%Y-%m-%d').date() if data.get('last_security_audit') else None,
+        has_incident_history=data.get('has_incident_history', False),
+        incident_details=data.get('incident_details'),
+        has_dr_plan=data.get('has_dr_plan', False),
+        sla_uptime=data.get('sla_uptime', 99.0),
+        geographic_presence=data.get('geographic_presence', []),
+        data_center_locations=data.get('data_center_locations'),
+        primary_contact=data.get('primary_contact'),
+        primary_email=data.get('primary_email'),
+        primary_phone=data.get('primary_phone'),
+        account_manager=data.get('account_manager'),
+        support_tier=data.get('support_tier'),
+        website=data.get('website'),
+        documentation_url=data.get('documentation_url'),
+        notes=data.get('notes')
+    )
+
+    db.session.add(vendor)
+    db.session.commit()
+
+    return jsonify(vendor.to_dict()), 201
+
+
+@app.route('/api/vendors/<vendor_id>', methods=['GET'])
+def get_vendor(vendor_id):
+    """Get a specific vendor."""
+    vendor = Vendor.query.get_or_404(vendor_id)
+    return jsonify(vendor.to_dict())
+
+
+@app.route('/api/vendors/<vendor_id>', methods=['PUT'])
+def update_vendor(vendor_id):
+    """Update a vendor."""
+    vendor = Vendor.query.get_or_404(vendor_id)
+    data = request.get_json()
+
+    # Update simple fields
+    simple_fields = [
+        'name', 'tier', 'status', 'annual_revenue', 'years_in_business',
+        'financial_rating', 'publicly_traded', 'stock_symbol', 'annual_spend',
+        'payment_terms', 'contract_type', 'auto_renewal', 'security_score',
+        'compliances', 'has_incident_history', 'incident_details', 'has_dr_plan',
+        'sla_uptime', 'geographic_presence', 'data_center_locations',
+        'primary_contact', 'primary_email', 'primary_phone', 'account_manager',
+        'support_tier', 'website', 'documentation_url', 'notes'
+    ]
+
+    for field in simple_fields:
+        if field in data:
+            setattr(vendor, field, data[field])
+
+    # Update date fields
+    if 'contract_start' in data:
+        vendor.contract_start = datetime.strptime(data['contract_start'], '%Y-%m-%d').date() if data['contract_start'] else None
+    if 'contract_end' in data:
+        vendor.contract_end = datetime.strptime(data['contract_end'], '%Y-%m-%d').date() if data['contract_end'] else None
+    if 'last_security_audit' in data:
+        vendor.last_security_audit = datetime.strptime(data['last_security_audit'], '%Y-%m-%d').date() if data['last_security_audit'] else None
+
+    db.session.commit()
+
+    return jsonify(vendor.to_dict())
+
+
+@app.route('/api/vendors/<vendor_id>', methods=['DELETE'])
+def delete_vendor(vendor_id):
+    """Delete a vendor."""
+    vendor = Vendor.query.get_or_404(vendor_id)
+    db.session.delete(vendor)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/vendors/<vendor_id>/assess', methods=['POST'])
+def assess_vendor(vendor_id):
+    """Run risk assessment on a vendor."""
+    vendor = Vendor.query.get_or_404(vendor_id)
+    data = request.get_json() or {}
+
+    industry = data.get('industry', 'general')
+    total_it_spend = data.get('total_it_spend', 1000000)
+
+    # Use the vendor risk engine
+    engine = VendorRiskEngine()
+
+    # Convert vendor to engine format
+    from rationalization.vendor_risk_engine import VendorProfile, VendorTier, VendorStatus, ComplianceFramework as VCF
+    from datetime import date
+
+    # Map compliances
+    compliance_map = {
+        'SOC2': VCF.SOC2, 'ISO27001': VCF.ISO27001, 'HIPAA': VCF.HIPAA,
+        'PCI_DSS': VCF.PCI_DSS, 'GDPR': VCF.GDPR, 'FEDRAMP': VCF.FEDRAMP,
+        'SOX': VCF.SOX, 'CJIS': VCF.CJIS, 'FISMA': VCF.FISMA
+    }
+
+    compliances = []
+    for c in (vendor.compliances or []):
+        if c.upper() in compliance_map:
+            compliances.append(compliance_map[c.upper()])
+
+    profile = VendorProfile(
+        vendor_id=vendor.id,
+        name=vendor.name,
+        tier=VendorTier(vendor.tier) if vendor.tier else VendorTier.TACTICAL,
+        status=VendorStatus(vendor.status) if vendor.status else VendorStatus.ACTIVE,
+        annual_revenue=vendor.annual_revenue,
+        years_in_business=vendor.years_in_business,
+        financial_rating=vendor.financial_rating,
+        publicly_traded=vendor.publicly_traded or False,
+        contract_start=vendor.contract_start,
+        contract_end=vendor.contract_end,
+        annual_spend=vendor.annual_spend or 0,
+        security_score=vendor.security_score,
+        compliances=compliances,
+        last_security_audit=vendor.last_security_audit,
+        has_incident_history=vendor.has_incident_history or False,
+        has_dr_plan=vendor.has_dr_plan or False,
+        sla_uptime=vendor.sla_uptime or 99.0,
+        geographic_presence=vendor.geographic_presence or []
+    )
+
+    engine.add_vendor(profile)
+    assessment_result = engine.assess_vendor(vendor.id, industry, total_it_spend)
+
+    # Save assessment to database
+    assessment = VendorAssessment(
+        vendor_id=vendor.id,
+        portfolio_id=vendor.portfolio_id,
+        overall_risk_level=assessment_result.overall_risk_level.value,
+        overall_risk_score=assessment_result.overall_risk_score,
+        financial_risk_score=assessment_result.financial_risk_score,
+        security_risk_score=assessment_result.security_risk_score,
+        operational_risk_score=assessment_result.operational_risk_score,
+        compliance_risk_score=assessment_result.compliance_risk_score,
+        strategic_risk_score=assessment_result.strategic_risk_score,
+        concentration_risk_score=assessment_result.concentration_risk_score,
+        industry=industry,
+        total_it_spend=total_it_spend,
+        risk_factors=assessment_result.risk_factors,
+        recommendations=assessment_result.recommendations
+    )
+
+    db.session.add(assessment)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'assessment': assessment.to_dict()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/vendors/summary', methods=['GET'])
+def get_vendor_summary(portfolio_id):
+    """Get vendor portfolio summary."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    vendors = Vendor.query.filter_by(portfolio_id=portfolio_id).all()
+
+    if not vendors:
+        return jsonify({
+            'total_vendors': 0,
+            'total_spend': 0,
+            'tier_distribution': {},
+            'status_distribution': {},
+            'expiring_contracts': []
+        })
+
+    # Calculate summary
+    total_spend = sum(v.annual_spend or 0 for v in vendors)
+
+    tier_dist = {}
+    status_dist = {}
+    expiring = []
+
+    for vendor in vendors:
+        # Tier distribution
+        tier = vendor.tier or 'unclassified'
+        tier_dist[tier] = tier_dist.get(tier, 0) + 1
+
+        # Status distribution
+        status = vendor.status or 'unknown'
+        status_dist[status] = status_dist.get(status, 0) + 1
+
+        # Expiring contracts
+        if vendor.contract_end:
+            days = vendor.days_until_contract_end()
+            if days is not None and 0 < days <= 180:
+                expiring.append({
+                    'vendor_id': vendor.id,
+                    'vendor_name': vendor.name,
+                    'contract_end': vendor.contract_end.isoformat(),
+                    'days_remaining': days,
+                    'annual_spend': vendor.annual_spend
+                })
+
+    expiring.sort(key=lambda x: x['days_remaining'])
+
+    return jsonify({
+        'total_vendors': len(vendors),
+        'total_spend': total_spend,
+        'tier_distribution': tier_dist,
+        'status_distribution': status_dist,
+        'expiring_contracts': expiring[:10]
+    })
+
+
+@app.route('/vendors/<portfolio_id>')
+def vendors_page(portfolio_id):
+    """Vendor management page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    vendors = Vendor.query.filter_by(portfolio_id=portfolio_id).all()
+    return render_template('vendors.html', portfolio=portfolio, vendors=vendors)
+
+
+# =============================================================================
+# TIER 2: DEMO DATA FOR NEW FEATURES
+# =============================================================================
+
+@app.route('/api/demo/tier2/<portfolio_id>', methods=['POST'])
+def create_tier2_demo_data(portfolio_id):
+    """Create demo data for Tier 2 features (dependencies, integrations, vendors)."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    if len(applications) < 3:
+        return jsonify({'error': 'Need at least 3 applications for demo data'}), 400
+
+    # Create sample dependencies
+    dependencies_created = 0
+    app_ids = [app.id for app in applications]
+
+    # Create some realistic dependencies
+    sample_deps = [
+        (0, 1, 'api', 'strong'),
+        (1, 2, 'data', 'medium'),
+        (2, 0, 'reporting', 'weak'),  # Creates a cycle for testing
+        (0, 3, 'authentication', 'critical') if len(app_ids) > 3 else None,
+        (1, 4, 'data', 'medium') if len(app_ids) > 4 else None,
+    ]
+
+    for dep_info in sample_deps:
+        if dep_info and dep_info[0] < len(app_ids) and dep_info[1] < len(app_ids):
+            dep = ApplicationDependency(
+                portfolio_id=portfolio_id,
+                source_app_id=app_ids[dep_info[0]],
+                target_app_id=app_ids[dep_info[1]],
+                dependency_type=dep_info[2],
+                strength=dep_info[3],
+                description=f'Auto-generated {dep_info[2]} dependency'
+            )
+            db.session.add(dep)
+            dependencies_created += 1
+
+    # Create sample integrations
+    integrations_created = 0
+    sample_ints = [
+        {'type': 'api', 'protocol': 'REST', 'latency': 150, 'error_rate': 0.5, 'uptime': 99.9},
+        {'type': 'database', 'protocol': 'SQL', 'latency': 50, 'error_rate': 0.1, 'uptime': 99.99},
+        {'type': 'file_transfer', 'protocol': 'SFTP', 'latency': 2000, 'error_rate': 2.0, 'uptime': 99.0},
+        {'type': 'message_queue', 'protocol': 'Kafka', 'latency': 10, 'error_rate': 0.01, 'uptime': 99.95},
+    ]
+
+    for i, int_info in enumerate(sample_ints):
+        if i < len(app_ids) - 1:
+            integration = ApplicationIntegration(
+                portfolio_id=portfolio_id,
+                source_app_id=app_ids[i],
+                target_app_id=app_ids[i + 1],
+                integration_type=int_info['type'],
+                protocol=int_info['protocol'],
+                avg_latency_ms=int_info['latency'],
+                error_rate_percent=int_info['error_rate'],
+                uptime_percent=int_info['uptime'],
+                data_sensitivity='internal',
+                daily_transactions=1000 * (i + 1),
+                has_monitoring=i % 2 == 0,
+                has_error_handling=True,
+                has_retry_mechanism=i % 3 == 0
+            )
+            integration.calculate_health_score()
+            db.session.add(integration)
+            integrations_created += 1
+
+    # Create sample vendors
+    vendors_created = 0
+    sample_vendors = [
+        {'name': 'Microsoft', 'tier': 'strategic', 'spend': 250000, 'rating': 'AAA'},
+        {'name': 'Salesforce', 'tier': 'strategic', 'spend': 150000, 'rating': 'AA'},
+        {'name': 'ServiceNow', 'tier': 'tactical', 'spend': 80000, 'rating': 'A'},
+        {'name': 'Acme Software', 'tier': 'commodity', 'spend': 25000, 'rating': 'BBB'},
+    ]
+
+    for v_info in sample_vendors:
+        vendor = Vendor(
+            portfolio_id=portfolio_id,
+            name=v_info['name'],
+            tier=v_info['tier'],
+            status='active',
+            annual_spend=v_info['spend'],
+            financial_rating=v_info['rating'],
+            years_in_business=15,
+            has_dr_plan=True,
+            sla_uptime=99.9,
+            compliances=['SOC2', 'ISO27001']
+        )
+        db.session.add(vendor)
+        vendors_created += 1
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'dependencies_created': dependencies_created,
+        'integrations_created': integrations_created,
+        'vendors_created': vendors_created
+    })
+
+
+# =============================================================================
 # ERROR HANDLERS
 # =============================================================================
 
@@ -1060,4 +1806,4 @@ def server_error(error):
 # =============================================================================
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5102)

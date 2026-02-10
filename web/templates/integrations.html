@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+
+{% block title %}Integration Health - {{ portfolio.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .health-healthy { background-color: #dcfce7; color: #166534; }
+    .health-degraded { background-color: #fef3c7; color: #92400e; }
+    .health-unhealthy { background-color: #fed7aa; color: #9a3412; }
+    .health-critical { background-color: #fecaca; color: #991b1b; }
+    .health-bar { height: 8px; border-radius: 4px; background: #e2e8f0; }
+    .health-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .integration-card { transition: transform 0.2s; }
+    .integration-card:hover { transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
+                <li class="breadcrumb-item active text-white">Integrations</li>
+            </ol>
+        </nav>
+        <h1><i class="bi bi-plug me-2"></i>Integration Health</h1>
+        <p class="lead mb-0">Monitor and assess application integration health</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-2">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-plug display-4 text-primary"></i>
+                    <h3 class="mt-2" id="totalIntegrations">-</h3>
+                    <p class="text-muted mb-0">Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100 health-healthy">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle display-4"></i>
+                    <h3 class="mt-2" id="healthyCount">-</h3>
+                    <p class="mb-0">Healthy</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100 health-degraded">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-circle display-4"></i>
+                    <h3 class="mt-2" id="degradedCount">-</h3>
+                    <p class="mb-0">Degraded</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100 health-unhealthy">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle display-4"></i>
+                    <h3 class="mt-2" id="unhealthyCount">-</h3>
+                    <p class="mb-0">Unhealthy</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100 health-critical">
+                <div class="card-body text-center">
+                    <i class="bi bi-x-circle display-4"></i>
+                    <h3 class="mt-2" id="criticalCount">-</h3>
+                    <p class="mb-0">Critical</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-speedometer2 display-4 text-info"></i>
+                    <h3 class="mt-2" id="avgHealth">-</h3>
+                    <p class="text-muted mb-0">Avg Score</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary" onclick="runAnalysis()">
+            <i class="bi bi-activity me-1"></i>Run Health Analysis
+        </button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addIntegrationModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Integration
+        </button>
+        <button class="btn btn-outline-secondary" onclick="loadIntegrations()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </button>
+    </div>
+
+    <div class="row">
+        <!-- Integration List -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul me-2"></i>Integrations</span>
+                    <div>
+                        <select class="form-select form-select-sm" id="filterStatus" onchange="filterIntegrations()" style="width: auto; display: inline-block;">
+                            <option value="">All Status</option>
+                            <option value="healthy">Healthy</option>
+                            <option value="degraded">Degraded</option>
+                            <option value="unhealthy">Unhealthy</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="integrationList" style="max-height: 600px; overflow-y: auto;">
+                        <div class="text-center p-4">
+                            <div class="spinner-border spinner-border-sm me-2"></div>Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Health Distribution Chart -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-pie-chart me-2"></i>Health Distribution
+                </div>
+                <div class="card-body">
+                    <canvas id="healthChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Integration Types -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-diagram-2 me-2"></i>By Type
+                </div>
+                <div class="card-body p-0">
+                    <div id="typeBreakdown" class="list-group list-group-flush">
+                        <div class="list-group-item text-muted">Run analysis to see breakdown</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-lightbulb me-2"></i>Recommendations
+                </div>
+                <div class="card-body">
+                    <div id="recommendations">
+                        <p class="text-muted mb-0">Run analysis to generate recommendations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Integration Modal -->
+<div class="modal fade" id="addIntegrationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plug me-2"></i>Add Integration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addIntForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Source Application</label>
+                            <select class="form-select" id="intSourceApp" required>
+                                <option value="">Select source...</option>
+                                {% for app in applications %}
+                                <option value="{{ app.id }}">{{ app.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Target Application</label>
+                            <select class="form-select" id="intTargetApp">
+                                <option value="">Select target (or external)...</option>
+                                {% for app in applications %}
+                                <option value="{{ app.id }}">{{ app.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">External System (if no target app)</label>
+                        <input type="text" class="form-control" id="externalSystem" placeholder="e.g., Salesforce API">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Integration Type</label>
+                            <select class="form-select" id="intType">
+                                <option value="api">API</option>
+                                <option value="database">Database</option>
+                                <option value="file_transfer">File Transfer</option>
+                                <option value="message_queue">Message Queue</option>
+                                <option value="event_stream">Event Stream</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Protocol</label>
+                            <input type="text" class="form-control" id="intProtocol" placeholder="e.g., REST, SOAP">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Data Sensitivity</label>
+                            <select class="form-select" id="intSensitivity">
+                                <option value="public">Public</option>
+                                <option value="internal" selected>Internal</option>
+                                <option value="confidential">Confidential</option>
+                                <option value="restricted">Restricted</option>
+                                <option value="pii">PII</option>
+                            </select>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Health Metrics</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Avg Latency (ms)</label>
+                            <input type="number" class="form-control" id="intLatency" placeholder="e.g., 150">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Error Rate (%)</label>
+                            <input type="number" step="0.01" class="form-control" id="intErrorRate" placeholder="e.g., 0.5">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Uptime (%)</label>
+                            <input type="number" step="0.01" class="form-control" id="intUptime" value="99.9">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Daily Transactions</label>
+                            <input type="number" class="form-control" id="intTransactions" placeholder="e.g., 10000">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="hasMonitoring">
+                                <label class="form-check-label">Has Monitoring</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="hasErrorHandling">
+                                <label class="form-check-label">Has Error Handling</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="hasRetry">
+                                <label class="form-check-label">Has Retry Mechanism</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addIntegration()">Add Integration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let allIntegrations = [];
+let healthChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadIntegrations();
+    initChart();
+});
+
+function initChart() {
+    const ctx = document.getElementById('healthChart').getContext('2d');
+    healthChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Healthy', 'Degraded', 'Unhealthy', 'Critical'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+function loadIntegrations() {
+    fetch(`/api/portfolios/${portfolioId}/integrations`)
+        .then(r => r.json())
+        .then(integrations => {
+            allIntegrations = integrations;
+            updateSummary(integrations);
+            renderIntegrationList(integrations);
+        });
+}
+
+function updateSummary(integrations) {
+    document.getElementById('totalIntegrations').textContent = integrations.length;
+
+    const healthy = integrations.filter(i => i.health_status === 'healthy').length;
+    const degraded = integrations.filter(i => i.health_status === 'degraded').length;
+    const unhealthy = integrations.filter(i => i.health_status === 'unhealthy').length;
+    const critical = integrations.filter(i => i.health_status === 'critical').length;
+
+    document.getElementById('healthyCount').textContent = healthy;
+    document.getElementById('degradedCount').textContent = degraded;
+    document.getElementById('unhealthyCount').textContent = unhealthy;
+    document.getElementById('criticalCount').textContent = critical;
+
+    const avgScore = integrations.length > 0
+        ? (integrations.reduce((sum, i) => sum + (i.health_score || 0), 0) / integrations.length).toFixed(1)
+        : '-';
+    document.getElementById('avgHealth').textContent = avgScore;
+
+    // Update chart
+    healthChart.data.datasets[0].data = [healthy, degraded, unhealthy, critical];
+    healthChart.update();
+}
+
+function renderIntegrationList(integrations) {
+    const container = document.getElementById('integrationList');
+
+    if (integrations.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-muted">No integrations defined</div>';
+        return;
+    }
+
+    container.innerHTML = integrations.map(i => `
+        <div class="integration-card border-bottom p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6 class="mb-1">
+                        ${i.source_app_name || 'Unknown'}
+                        <i class="bi bi-arrow-right mx-2 text-muted"></i>
+                        ${i.target_app_name || i.external_system || 'External'}
+                    </h6>
+                    <small class="text-muted">
+                        ${i.integration_type || 'api'} | ${i.protocol || 'N/A'} |
+                        <span class="badge bg-secondary">${i.data_sensitivity || 'internal'}</span>
+                    </small>
+                </div>
+                <div class="text-end">
+                    <span class="badge health-${i.health_status || 'degraded'}">${(i.health_status || 'unknown').toUpperCase()}</span>
+                    <div class="mt-1">
+                        <small class="text-muted">Score: ${i.health_score ? i.health_score.toFixed(0) : '-'}</small>
+                    </div>
+                </div>
+            </div>
+            <div class="health-bar mt-2">
+                <div class="health-bar-fill" style="width: ${i.health_score || 0}%; background: ${getHealthColor(i.health_score)}"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+                <small class="text-muted">
+                    <i class="bi bi-clock me-1"></i>${i.avg_latency_ms ? i.avg_latency_ms + 'ms' : 'N/A'} |
+                    <i class="bi bi-exclamation-triangle me-1"></i>${i.error_rate_percent ? i.error_rate_percent + '%' : 'N/A'} |
+                    <i class="bi bi-arrow-up-circle me-1"></i>${i.uptime_percent ? i.uptime_percent + '%' : 'N/A'}
+                </small>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteIntegration('${i.id}')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getHealthColor(score) {
+    if (!score) return '#94a3b8';
+    if (score >= 90) return '#10b981';
+    if (score >= 70) return '#f59e0b';
+    if (score >= 50) return '#f97316';
+    return '#ef4444';
+}
+
+function filterIntegrations() {
+    const status = document.getElementById('filterStatus').value;
+    const filtered = status ? allIntegrations.filter(i => i.health_status === status) : allIntegrations;
+    renderIntegrationList(filtered);
+}
+
+function runAnalysis() {
+    showLoading('Running health analysis...');
+
+    fetch(`/api/portfolios/${portfolioId}/integrations/analyze`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                displayAnalysisResults(data.analysis);
+                loadIntegrations();
+            } else {
+                alert('Error: ' + (data.error || 'Analysis failed'));
+            }
+        })
+        .catch(err => {
+            hideLoading();
+            alert('Error: ' + err.message);
+        });
+}
+
+function displayAnalysisResults(analysis) {
+    // Type breakdown
+    if (analysis.integration_type_breakdown) {
+        const typeHtml = Object.entries(analysis.integration_type_breakdown)
+            .map(([type, data]) => `
+                <div class="list-group-item d-flex justify-content-between">
+                    <span>${type}</span>
+                    <span class="badge bg-primary">${data.count} (avg: ${data.avg_health.toFixed(0)})</span>
+                </div>
+            `).join('');
+        document.getElementById('typeBreakdown').innerHTML = typeHtml || '<div class="list-group-item text-muted">No data</div>';
+    }
+
+    // Recommendations
+    if (analysis.recommendations && analysis.recommendations.length > 0) {
+        document.getElementById('recommendations').innerHTML = analysis.recommendations
+            .map(r => `<p class="mb-2"><i class="bi bi-lightbulb text-warning me-2"></i>${r}</p>`)
+            .join('');
+    }
+}
+
+function addIntegration() {
+    const data = {
+        source_app_id: document.getElementById('intSourceApp').value,
+        target_app_id: document.getElementById('intTargetApp').value || null,
+        external_system: document.getElementById('externalSystem').value || null,
+        integration_type: document.getElementById('intType').value,
+        protocol: document.getElementById('intProtocol').value,
+        data_sensitivity: document.getElementById('intSensitivity').value,
+        avg_latency_ms: parseFloat(document.getElementById('intLatency').value) || null,
+        error_rate_percent: parseFloat(document.getElementById('intErrorRate').value) || null,
+        uptime_percent: parseFloat(document.getElementById('intUptime').value) || 99.0,
+        daily_transactions: parseInt(document.getElementById('intTransactions').value) || null,
+        has_monitoring: document.getElementById('hasMonitoring').checked,
+        has_error_handling: document.getElementById('hasErrorHandling').checked,
+        has_retry_mechanism: document.getElementById('hasRetry').checked
+    };
+
+    if (!data.source_app_id) {
+        alert('Please select a source application');
+        return;
+    }
+
+    fetch(`/api/portfolios/${portfolioId}/integrations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('addIntegrationModal')).hide();
+        loadIntegrations();
+    });
+}
+
+function deleteIntegration(intId) {
+    if (!confirm('Delete this integration?')) return;
+
+    fetch(`/api/integrations/${intId}`, { method: 'DELETE' })
+        .then(() => loadIntegrations());
+}
+
+function showLoading(msg) {
+    const overlay = document.createElement('div');
+    overlay.id = 'loadingOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    overlay.innerHTML = `<div class="bg-white p-4 rounded"><div class="spinner-border me-2"></div>${msg}</div>`;
+    document.body.appendChild(overlay);
+}
+
+function hideLoading() {
+    const el = document.getElementById('loadingOverlay');
+    if (el) el.remove();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Dependency Mapping - {{ portfolio.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dependency-graph {
+        width: 100%;
+        height: 500px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+    }
+    .dep-node {
+        cursor: pointer;
+    }
+    .strength-critical { stroke: #ef4444; stroke-width: 3px; }
+    .strength-strong { stroke: #f59e0b; stroke-width: 2px; }
+    .strength-medium { stroke: #3b82f6; stroke-width: 1.5px; }
+    .strength-weak { stroke: #94a3b8; stroke-width: 1px; stroke-dasharray: 4; }
+    .circular-warning { background: #fef2f2; border-left: 4px solid #ef4444; }
+    .hub-indicator { background: #fef3c7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
+                <li class="breadcrumb-item active text-white">Dependencies</li>
+            </ol>
+        </nav>
+        <h1><i class="bi bi-diagram-3 me-2"></i>Dependency Mapping</h1>
+        <p class="lead mb-0">Visualize and analyze application interconnections</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-boxes display-4 text-primary"></i>
+                    <h3 class="mt-2" id="totalApps">{{ applications|length }}</h3>
+                    <p class="text-muted mb-0">Applications</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-left-right display-4 text-info"></i>
+                    <h3 class="mt-2" id="totalDeps">-</h3>
+                    <p class="text-muted mb-0">Dependencies</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-repeat display-4 text-danger"></i>
+                    <h3 class="mt-2" id="circularCount">-</h3>
+                    <p class="text-muted mb-0">Circular Dependencies</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-exclamation display-4 text-warning"></i>
+                    <h3 class="mt-2" id="riskLevel">-</h3>
+                    <p class="text-muted mb-0">Risk Level</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary" onclick="runAnalysis()">
+            <i class="bi bi-play-fill me-1"></i>Run Analysis
+        </button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDependencyModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Dependency
+        </button>
+        <button class="btn btn-outline-secondary" onclick="loadDependencies()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </button>
+    </div>
+
+    <!-- Circular Dependencies Warning -->
+    <div id="circularWarnings" class="mb-4" style="display: none;">
+        <div class="card circular-warning">
+            <div class="card-body">
+                <h5><i class="bi bi-exclamation-triangle text-danger me-2"></i>Circular Dependencies Detected</h5>
+                <div id="circularList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Dependency Graph -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-diagram-3 me-2"></i>Dependency Graph
+                </div>
+                <div class="card-body p-0">
+                    <div id="graphContainer" class="dependency-graph">
+                        <svg id="dependencyGraph" width="100%" height="100%"></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dependency List -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul me-2"></i>Dependencies</span>
+                    <span class="badge bg-secondary" id="depCount">0</span>
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    <div id="dependencyList" class="list-group list-group-flush">
+                        <div class="list-group-item text-center text-muted">
+                            <div class="spinner-border spinner-border-sm me-2"></div>Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hub Applications -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <i class="bi bi-bullseye me-2"></i>Hub Applications
+                </div>
+                <div class="card-body p-0">
+                    <div id="hubApps" class="list-group list-group-flush">
+                        <div class="list-group-item text-muted">Run analysis to identify hubs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-lightbulb me-2"></i>Recommendations
+        </div>
+        <div class="card-body">
+            <div id="recommendations">
+                <p class="text-muted mb-0">Run analysis to generate recommendations</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Dependency Modal -->
+<div class="modal fade" id="addDependencyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add Dependency</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addDepForm">
+                    <div class="mb-3">
+                        <label class="form-label">Source Application</label>
+                        <select class="form-select" id="sourceApp" required>
+                            <option value="">Select source...</option>
+                            {% for app in applications %}
+                            <option value="{{ app.id }}">{{ app.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Application</label>
+                        <select class="form-select" id="targetApp" required>
+                            <option value="">Select target...</option>
+                            {% for app in applications %}
+                            <option value="{{ app.id }}">{{ app.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dependency Type</label>
+                        <select class="form-select" id="depType">
+                            <option value="data">Data</option>
+                            <option value="api">API</option>
+                            <option value="authentication">Authentication</option>
+                            <option value="reporting">Reporting</option>
+                            <option value="infrastructure">Infrastructure</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Strength</label>
+                        <select class="form-select" id="depStrength">
+                            <option value="critical">Critical</option>
+                            <option value="strong">Strong</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="weak">Weak</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="depDescription" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addDependency()">Add Dependency</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let graphData = { nodes: [], edges: [] };
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDependencies();
+});
+
+function loadDependencies() {
+    fetch(`/api/portfolios/${portfolioId}/dependencies`)
+        .then(r => r.json())
+        .then(deps => {
+            document.getElementById('totalDeps').textContent = deps.length;
+            document.getElementById('depCount').textContent = deps.length;
+            renderDependencyList(deps);
+            loadVisualization();
+        });
+}
+
+function renderDependencyList(deps) {
+    const container = document.getElementById('dependencyList');
+    if (deps.length === 0) {
+        container.innerHTML = '<div class="list-group-item text-muted">No dependencies defined</div>';
+        return;
+    }
+
+    container.innerHTML = deps.map(d => `
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>${d.source_app_name || 'Unknown'}</strong>
+                <i class="bi bi-arrow-right mx-2 text-muted"></i>
+                <strong>${d.target_app_name || 'Unknown'}</strong>
+                <br>
+                <small class="text-muted">${d.dependency_type || 'data'} | ${d.strength || 'medium'}</small>
+            </div>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteDependency('${d.id}')">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function loadVisualization() {
+    fetch(`/api/portfolios/${portfolioId}/dependencies/visualization`)
+        .then(r => r.json())
+        .then(data => {
+            graphData = data;
+            renderGraph(data);
+        });
+}
+
+function renderGraph(data) {
+    const svg = d3.select('#dependencyGraph');
+    svg.selectAll('*').remove();
+
+    const width = document.getElementById('graphContainer').clientWidth;
+    const height = 500;
+
+    if (data.nodes.length === 0) {
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height / 2)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#94a3b8')
+            .text('No applications to display');
+        return;
+    }
+
+    const simulation = d3.forceSimulation(data.nodes)
+        .force('link', d3.forceLink(data.edges).id(d => d.id).distance(150))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2));
+
+    // Arrow markers
+    svg.append('defs').selectAll('marker')
+        .data(['critical', 'strong', 'medium', 'weak'])
+        .join('marker')
+        .attr('id', d => `arrow-${d}`)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 25)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('fill', d => d === 'critical' ? '#ef4444' : d === 'strong' ? '#f59e0b' : d === 'medium' ? '#3b82f6' : '#94a3b8')
+        .attr('d', 'M0,-5L10,0L0,5');
+
+    const link = svg.append('g')
+        .selectAll('line')
+        .data(data.edges)
+        .join('line')
+        .attr('class', d => `strength-${d.strength || 'medium'}`)
+        .attr('marker-end', d => `url(#arrow-${d.strength || 'medium'})`);
+
+    const node = svg.append('g')
+        .selectAll('g')
+        .data(data.nodes)
+        .join('g')
+        .attr('class', 'dep-node')
+        .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended));
+
+    node.append('circle')
+        .attr('r', 20)
+        .attr('fill', d => {
+            const colors = { 'Invest': '#10b981', 'Tolerate': '#f59e0b', 'Migrate': '#3b82f6', 'Eliminate': '#ef4444' };
+            return colors[d.time_category] || '#64748b';
+        });
+
+    node.append('text')
+        .attr('dy', 35)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '12px')
+        .text(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name);
+
+    simulation.on('tick', () => {
+        link
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    function dragstarted(event) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+    }
+
+    function dragged(event) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+    }
+
+    function dragended(event) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+    }
+}
+
+function runAnalysis() {
+    showLoading('Running dependency analysis...');
+
+    fetch(`/api/portfolios/${portfolioId}/dependencies/analyze`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                displayAnalysisResults(data.analysis);
+            } else {
+                alert('Error: ' + (data.error || 'Analysis failed'));
+            }
+        })
+        .catch(err => {
+            hideLoading();
+            alert('Error: ' + err.message);
+        });
+}
+
+function displayAnalysisResults(analysis) {
+    document.getElementById('totalDeps').textContent = analysis.total_dependencies;
+    document.getElementById('circularCount').textContent = analysis.circular_dependency_count;
+    document.getElementById('riskLevel').textContent = analysis.overall_risk_level.toUpperCase();
+
+    // Color risk level
+    const riskEl = document.getElementById('riskLevel');
+    riskEl.className = '';
+    if (analysis.overall_risk_level === 'critical') riskEl.classList.add('text-danger');
+    else if (analysis.overall_risk_level === 'high') riskEl.classList.add('text-warning');
+    else riskEl.classList.add('text-success');
+
+    // Circular dependencies warning
+    if (analysis.circular_dependency_count > 0) {
+        document.getElementById('circularWarnings').style.display = 'block';
+        document.getElementById('circularList').innerHTML = analysis.circular_dependencies
+            .map(c => `<p class="mb-1"><i class="bi bi-arrow-repeat me-2"></i>${c.join(' → ')}</p>`)
+            .join('');
+    } else {
+        document.getElementById('circularWarnings').style.display = 'none';
+    }
+
+    // Hub applications
+    if (analysis.hub_applications && analysis.hub_applications.length > 0) {
+        document.getElementById('hubApps').innerHTML = analysis.hub_applications
+            .map(h => `
+                <div class="list-group-item hub-indicator">
+                    <strong>${h.name || h.app_id}</strong>
+                    <span class="badge bg-warning float-end">${h.total_connections || 0} connections</span>
+                </div>
+            `).join('');
+    }
+
+    // Recommendations
+    if (analysis.recommendations && analysis.recommendations.length > 0) {
+        document.getElementById('recommendations').innerHTML = analysis.recommendations
+            .map(r => `<p class="mb-2"><i class="bi bi-lightbulb text-warning me-2"></i>${r}</p>`)
+            .join('');
+    }
+}
+
+function addDependency() {
+    const data = {
+        source_app_id: document.getElementById('sourceApp').value,
+        target_app_id: document.getElementById('targetApp').value,
+        dependency_type: document.getElementById('depType').value,
+        strength: document.getElementById('depStrength').value,
+        description: document.getElementById('depDescription').value
+    };
+
+    if (!data.source_app_id || !data.target_app_id) {
+        alert('Please select both source and target applications');
+        return;
+    }
+
+    fetch(`/api/portfolios/${portfolioId}/dependencies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('addDependencyModal')).hide();
+        loadDependencies();
+    });
+}
+
+function deleteDependency(depId) {
+    if (!confirm('Delete this dependency?')) return;
+
+    fetch(`/api/dependencies/${depId}`, { method: 'DELETE' })
+        .then(() => loadDependencies());
+}
+
+function showLoading(msg) {
+    const overlay = document.createElement('div');
+    overlay.id = 'loadingOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+    overlay.innerHTML = `<div class="bg-white p-4 rounded"><div class="spinner-border me-2"></div>${msg}</div>`;
+    document.body.appendChild(overlay);
+}
+
+function hideLoading() {
+    const el = document.getElementById('loadingOverlay');
+    if (el) el.remove();
+}
+</script>
+{% endblock %}

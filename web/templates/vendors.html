@@ -1,0 +1,611 @@
+{% extends "base.html" %}
+
+{% block title %}Vendor Management - {{ portfolio.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tier-strategic { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: white; }
+    .tier-tactical { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; }
+    .tier-commodity { background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); color: white; }
+    .tier-emerging { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); color: white; }
+    .risk-critical { background-color: #fecaca; color: #991b1b; }
+    .risk-high { background-color: #fed7aa; color: #9a3412; }
+    .risk-medium { background-color: #fef3c7; color: #92400e; }
+    .risk-low { background-color: #d1fae5; color: #065f46; }
+    .risk-minimal { background-color: #dbeafe; color: #1e40af; }
+    .vendor-card { transition: all 0.2s; cursor: pointer; }
+    .vendor-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+    .contract-warning { border-left: 4px solid #f59e0b; }
+    .contract-critical { border-left: 4px solid #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
+                <li class="breadcrumb-item active text-white">Vendors</li>
+            </ol>
+        </nav>
+        <h1><i class="bi bi-building me-2"></i>Vendor Risk Management</h1>
+        <p class="lead mb-0">Manage vendor relationships and assess risks</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-buildings display-4 text-primary"></i>
+                    <h3 class="mt-2" id="totalVendors">{{ vendors|length }}</h3>
+                    <p class="text-muted mb-0">Total Vendors</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-currency-dollar display-4 text-success"></i>
+                    <h3 class="mt-2" id="totalSpend">-</h3>
+                    <p class="text-muted mb-0">Total Annual Spend</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-calendar-event display-4 text-warning"></i>
+                    <h3 class="mt-2" id="expiringCount">-</h3>
+                    <p class="text-muted mb-0">Expiring (180 days)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-shield-exclamation display-4 text-danger"></i>
+                    <h3 class="mt-2" id="highRiskCount">-</h3>
+                    <p class="text-muted mb-0">High Risk</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addVendorModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Vendor
+        </button>
+        <button class="btn btn-outline-secondary" onclick="loadVendors()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+        </button>
+    </div>
+
+    <!-- Expiring Contracts Alert -->
+    <div id="expiringAlert" class="mb-4" style="display: none;">
+        <div class="card contract-warning">
+            <div class="card-body">
+                <h5><i class="bi bi-calendar-event text-warning me-2"></i>Contracts Expiring Soon</h5>
+                <div id="expiringList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Vendor Grid -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-grid me-2"></i>Vendors</span>
+                    <div>
+                        <select class="form-select form-select-sm" id="filterTier" onchange="filterVendors()" style="width: auto; display: inline-block;">
+                            <option value="">All Tiers</option>
+                            <option value="strategic">Strategic</option>
+                            <option value="tactical">Tactical</option>
+                            <option value="commodity">Commodity</option>
+                            <option value="emerging">Emerging</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="vendorGrid" class="row g-3">
+                        <!-- Vendors loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Tier Distribution -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-pie-chart me-2"></i>Tier Distribution
+                </div>
+                <div class="card-body">
+                    <canvas id="tierChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Spend by Tier -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-bar-chart me-2"></i>Spend by Tier
+                </div>
+                <div class="card-body">
+                    <canvas id="spendChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-lightning me-2"></i>Quick Actions
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action" onclick="assessAllVendors(); return false;">
+                        <i class="bi bi-clipboard-check me-2"></i>Assess All Vendors
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="exportVendors(); return false;">
+                        <i class="bi bi-download me-2"></i>Export to CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Vendor Modal -->
+<div class="modal fade" id="addVendorModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-building me-2"></i>Add Vendor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addVendorForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Vendor Name *</label>
+                            <input type="text" class="form-control" id="vendorName" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Tier</label>
+                            <select class="form-select" id="vendorTier">
+                                <option value="tactical">Tactical</option>
+                                <option value="strategic">Strategic</option>
+                                <option value="commodity">Commodity</option>
+                                <option value="emerging">Emerging</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="vendorStatus">
+                                <option value="active">Active</option>
+                                <option value="probation">Probation</option>
+                                <option value="under_review">Under Review</option>
+                                <option value="sunset">Sunset</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr><h6>Financial Information</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Annual Spend ($)</label>
+                            <input type="number" class="form-control" id="annualSpend" placeholder="e.g., 100000">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Years in Business</label>
+                            <input type="number" class="form-control" id="yearsInBusiness">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Financial Rating</label>
+                            <select class="form-select" id="financialRating">
+                                <option value="">Unknown</option>
+                                <option value="AAA">AAA</option>
+                                <option value="AA">AA</option>
+                                <option value="A">A</option>
+                                <option value="BBB">BBB</option>
+                                <option value="BB">BB</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr><h6>Contract Details</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Contract Start</label>
+                            <input type="date" class="form-control" id="contractStart">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Contract End</label>
+                            <input type="date" class="form-control" id="contractEnd">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Contract Type</label>
+                            <select class="form-select" id="contractType">
+                                <option value="subscription">Subscription</option>
+                                <option value="perpetual">Perpetual</option>
+                                <option value="metered">Metered</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr><h6>Security & Compliance</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Security Score (0-100)</label>
+                            <input type="number" class="form-control" id="securityScore" min="0" max="100">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">SLA Uptime (%)</label>
+                            <input type="number" step="0.01" class="form-control" id="slaUptime" value="99.9">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Last Security Audit</label>
+                            <input type="date" class="form-control" id="lastAudit">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Compliances (comma-separated)</label>
+                        <input type="text" class="form-control" id="compliances" placeholder="e.g., SOC2, ISO27001, HIPAA">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="hasDRPlan">
+                                <label class="form-check-label">Has DR Plan</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="hasIncidents">
+                                <label class="form-check-label">Has Incident History</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="publiclyTraded">
+                                <label class="form-check-label">Publicly Traded</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addVendor()">Add Vendor</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vendor Detail Modal -->
+<div class="modal fade" id="vendorDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vendorDetailTitle">Vendor Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="vendorDetailBody">
+                <!-- Populated by JS -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="deleteVendorBtn">Delete</button>
+                <button type="button" class="btn btn-warning" id="assessVendorBtn">Assess Risk</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let allVendors = [];
+let tierChart = null;
+let spendChart = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadVendors();
+    loadSummary();
+    initCharts();
+});
+
+function initCharts() {
+    tierChart = new Chart(document.getElementById('tierChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Strategic', 'Tactical', 'Commodity', 'Emerging'],
+            datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#1e3a5f', '#0d9488', '#6b7280', '#7c3aed'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    spendChart = new Chart(document.getElementById('spendChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['Strategic', 'Tactical', 'Commodity', 'Emerging'],
+            datasets: [{ label: 'Spend ($)', data: [0, 0, 0, 0], backgroundColor: ['#1e3a5f', '#0d9488', '#6b7280', '#7c3aed'] }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+}
+
+function loadVendors() {
+    fetch(`/api/portfolios/${portfolioId}/vendors`)
+        .then(r => r.json())
+        .then(vendors => {
+            allVendors = vendors;
+            renderVendorGrid(vendors);
+            updateCharts(vendors);
+        });
+}
+
+function loadSummary() {
+    fetch(`/api/portfolios/${portfolioId}/vendors/summary`)
+        .then(r => r.json())
+        .then(summary => {
+            document.getElementById('totalVendors').textContent = summary.total_vendors;
+            document.getElementById('totalSpend').textContent = '$' + (summary.total_spend || 0).toLocaleString();
+            document.getElementById('expiringCount').textContent = summary.expiring_contracts?.length || 0;
+
+            // Show expiring contracts
+            if (summary.expiring_contracts && summary.expiring_contracts.length > 0) {
+                document.getElementById('expiringAlert').style.display = 'block';
+                document.getElementById('expiringList').innerHTML = summary.expiring_contracts
+                    .map(c => `
+                        <p class="mb-1">
+                            <strong>${c.vendor_name}</strong> -
+                            ${c.days_remaining} days remaining
+                            <span class="badge ${c.days_remaining < 30 ? 'bg-danger' : 'bg-warning'} ms-2">
+                                $${(c.annual_spend || 0).toLocaleString()}
+                            </span>
+                        </p>
+                    `).join('');
+            }
+        });
+}
+
+function renderVendorGrid(vendors) {
+    const container = document.getElementById('vendorGrid');
+
+    if (vendors.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No vendors found</div>';
+        return;
+    }
+
+    container.innerHTML = vendors.map(v => `
+        <div class="col-md-6">
+            <div class="card vendor-card h-100" onclick="showVendorDetail('${v.id}')">
+                <div class="card-header tier-${v.tier || 'tactical'}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>${v.name}</strong>
+                        <span class="badge bg-light text-dark">${(v.tier || 'tactical').toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Annual Spend</span>
+                        <strong>$${(v.annual_spend || 0).toLocaleString()}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Status</span>
+                        <span class="badge ${v.status === 'active' ? 'bg-success' : v.status === 'probation' ? 'bg-danger' : 'bg-warning'}">
+                            ${v.status || 'active'}
+                        </span>
+                    </div>
+                    ${v.contract_end ? `
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Contract Ends</span>
+                        <span>${new Date(v.contract_end).toLocaleDateString()}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateCharts(vendors) {
+    const tierCount = { strategic: 0, tactical: 0, commodity: 0, emerging: 0 };
+    const tierSpend = { strategic: 0, tactical: 0, commodity: 0, emerging: 0 };
+
+    vendors.forEach(v => {
+        const tier = v.tier || 'tactical';
+        tierCount[tier] = (tierCount[tier] || 0) + 1;
+        tierSpend[tier] = (tierSpend[tier] || 0) + (v.annual_spend || 0);
+    });
+
+    tierChart.data.datasets[0].data = [tierCount.strategic, tierCount.tactical, tierCount.commodity, tierCount.emerging];
+    tierChart.update();
+
+    spendChart.data.datasets[0].data = [tierSpend.strategic, tierSpend.tactical, tierSpend.commodity, tierSpend.emerging];
+    spendChart.update();
+}
+
+function filterVendors() {
+    const tier = document.getElementById('filterTier').value;
+    const filtered = tier ? allVendors.filter(v => v.tier === tier) : allVendors;
+    renderVendorGrid(filtered);
+}
+
+function showVendorDetail(vendorId) {
+    const vendor = allVendors.find(v => v.id === vendorId);
+    if (!vendor) return;
+
+    document.getElementById('vendorDetailTitle').textContent = vendor.name;
+    document.getElementById('vendorDetailBody').innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>General Information</h6>
+                <table class="table table-sm">
+                    <tr><td>Tier</td><td><strong>${vendor.tier || 'tactical'}</strong></td></tr>
+                    <tr><td>Status</td><td><span class="badge ${vendor.status === 'active' ? 'bg-success' : 'bg-warning'}">${vendor.status}</span></td></tr>
+                    <tr><td>Years in Business</td><td>${vendor.years_in_business || 'N/A'}</td></tr>
+                    <tr><td>Financial Rating</td><td>${vendor.financial_rating || 'N/A'}</td></tr>
+                </table>
+
+                <h6>Contract Details</h6>
+                <table class="table table-sm">
+                    <tr><td>Annual Spend</td><td><strong>$${(vendor.annual_spend || 0).toLocaleString()}</strong></td></tr>
+                    <tr><td>Contract Start</td><td>${vendor.contract_start || 'N/A'}</td></tr>
+                    <tr><td>Contract End</td><td>${vendor.contract_end || 'N/A'}</td></tr>
+                    <tr><td>Contract Type</td><td>${vendor.contract_type || 'N/A'}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Security & Compliance</h6>
+                <table class="table table-sm">
+                    <tr><td>Security Score</td><td>${vendor.security_score ? vendor.security_score + '/100' : 'N/A'}</td></tr>
+                    <tr><td>SLA Uptime</td><td>${vendor.sla_uptime || 99}%</td></tr>
+                    <tr><td>Last Audit</td><td>${vendor.last_security_audit || 'N/A'}</td></tr>
+                    <tr><td>DR Plan</td><td>${vendor.has_dr_plan ? '<i class="bi bi-check-circle text-success"></i> Yes' : '<i class="bi bi-x-circle text-danger"></i> No'}</td></tr>
+                    <tr><td>Incident History</td><td>${vendor.has_incident_history ? '<i class="bi bi-exclamation-triangle text-warning"></i> Yes' : '<i class="bi bi-check-circle text-success"></i> No'}</td></tr>
+                </table>
+
+                <h6>Compliances</h6>
+                <div>${(vendor.compliances || []).map(c => `<span class="badge bg-primary me-1">${c}</span>`).join('') || '<span class="text-muted">None recorded</span>'}</div>
+            </div>
+        </div>
+
+        <div id="riskAssessmentResult" class="mt-3"></div>
+    `;
+
+    document.getElementById('deleteVendorBtn').onclick = () => deleteVendor(vendorId);
+    document.getElementById('assessVendorBtn').onclick = () => assessVendor(vendorId);
+
+    new bootstrap.Modal(document.getElementById('vendorDetailModal')).show();
+}
+
+function addVendor() {
+    const compliances = document.getElementById('compliances').value
+        .split(',')
+        .map(c => c.trim())
+        .filter(c => c);
+
+    const data = {
+        name: document.getElementById('vendorName').value,
+        tier: document.getElementById('vendorTier').value,
+        status: document.getElementById('vendorStatus').value,
+        annual_spend: parseFloat(document.getElementById('annualSpend').value) || 0,
+        years_in_business: parseInt(document.getElementById('yearsInBusiness').value) || null,
+        financial_rating: document.getElementById('financialRating').value || null,
+        contract_start: document.getElementById('contractStart').value || null,
+        contract_end: document.getElementById('contractEnd').value || null,
+        contract_type: document.getElementById('contractType').value,
+        security_score: parseFloat(document.getElementById('securityScore').value) || null,
+        sla_uptime: parseFloat(document.getElementById('slaUptime').value) || 99.9,
+        last_security_audit: document.getElementById('lastAudit').value || null,
+        compliances: compliances,
+        has_dr_plan: document.getElementById('hasDRPlan').checked,
+        has_incident_history: document.getElementById('hasIncidents').checked,
+        publicly_traded: document.getElementById('publiclyTraded').checked
+    };
+
+    if (!data.name) {
+        alert('Please enter vendor name');
+        return;
+    }
+
+    fetch(`/api/portfolios/${portfolioId}/vendors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('addVendorModal')).hide();
+        loadVendors();
+        loadSummary();
+    });
+}
+
+function deleteVendor(vendorId) {
+    if (!confirm('Delete this vendor?')) return;
+
+    fetch(`/api/vendors/${vendorId}`, { method: 'DELETE' })
+        .then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('vendorDetailModal')).hide();
+            loadVendors();
+            loadSummary();
+        });
+}
+
+function assessVendor(vendorId) {
+    const resultDiv = document.getElementById('riskAssessmentResult');
+    resultDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm me-2"></div>Assessing risk...</div>';
+
+    fetch(`/api/vendors/${vendorId}/assess`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry: 'general', total_it_spend: 1000000 })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const a = data.assessment;
+            resultDiv.innerHTML = `
+                <div class="card risk-${a.overall_risk_level}">
+                    <div class="card-header">
+                        <strong>Risk Assessment</strong>
+                        <span class="badge bg-dark float-end">${a.overall_risk_level.toUpperCase()}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6">Overall Score: <strong>${a.overall_risk_score.toFixed(1)}</strong></div>
+                            <div class="col-6">Financial: ${a.financial_risk_score.toFixed(1)}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6">Security: ${a.security_risk_score.toFixed(1)}</div>
+                            <div class="col-6">Operational: ${a.operational_risk_score.toFixed(1)}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">Compliance: ${a.compliance_risk_score.toFixed(1)}</div>
+                            <div class="col-6">Strategic: ${a.strategic_risk_score.toFixed(1)}</div>
+                        </div>
+                        ${a.recommendations && a.recommendations.length > 0 ? `
+                        <h6>Recommendations</h6>
+                        <ul class="mb-0">${a.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-danger">${data.error || 'Assessment failed'}</div>`;
+        }
+    });
+}
+
+function assessAllVendors() {
+    if (!confirm('Assess all vendors? This may take a moment.')) return;
+    alert('Batch assessment not yet implemented');
+}
+
+function exportVendors() {
+    const csv = ['Name,Tier,Status,Annual Spend,Contract End'];
+    allVendors.forEach(v => {
+        csv.push(`"${v.name}","${v.tier}","${v.status}","${v.annual_spend}","${v.contract_end || ''}"`);
+    });
+
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vendors.csv';
+    a.click();
+}
+</script>
+{% endblock %}

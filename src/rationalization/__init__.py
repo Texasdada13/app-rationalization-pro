@@ -21,6 +21,33 @@ from .gov_scoring_engine import (
     DataSensitivity
 )
 
+# Tier 2: Dependency, Integration, and Vendor Management
+from .dependency_mapper import (
+    DependencyMapper,
+    DependencyType,
+    DependencyStrength,
+    Dependency,
+    create_demo_dependencies
+)
+from .integration_assessor import (
+    IntegrationAssessor,
+    IntegrationType,
+    IntegrationHealth,
+    Integration,
+    IntegrationAssessment,
+    create_demo_integrations
+)
+from .vendor_risk_engine import (
+    VendorRiskEngine,
+    VendorTier,
+    VendorStatus,
+    RiskLevel,
+    ComplianceFramework as VendorComplianceFramework,
+    VendorProfile,
+    RiskAssessment,
+    create_demo_vendors
+)
+
 __all__ = [
     # Enterprise engines
     'ScoringEngine',
@@ -43,7 +70,29 @@ __all__ = [
     'GovernmentScoringEngine',
     'GovernmentScoringWeights',
     'GovernmentSector',
-    'DataSensitivity'
+    'DataSensitivity',
+    # Tier 2: Dependency Mapping
+    'DependencyMapper',
+    'DependencyType',
+    'DependencyStrength',
+    'Dependency',
+    'create_demo_dependencies',
+    # Tier 2: Integration Assessment
+    'IntegrationAssessor',
+    'IntegrationType',
+    'IntegrationHealth',
+    'Integration',
+    'IntegrationAssessment',
+    'create_demo_integrations',
+    # Tier 2: Vendor Risk Management
+    'VendorRiskEngine',
+    'VendorTier',
+    'VendorStatus',
+    'RiskLevel',
+    'VendorComplianceFramework',
+    'VendorProfile',
+    'RiskAssessment',
+    'create_demo_vendors'
 ]
 
 
