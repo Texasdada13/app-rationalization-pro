@@ -776,7 +776,9 @@ def risk_page(portfolio_id):
     """Risk assessment page."""
     portfolio = Portfolio.query.get_or_404(portfolio_id)
     applications = portfolio.applications.all()
-    return render_template('risk.html', portfolio=portfolio, applications=applications)
+    # Convert to dicts for JSON serialization in template
+    applications_data = [app.to_dict() for app in applications]
+    return render_template('risk.html', portfolio=portfolio, applications=applications_data)
 
 
 # =============================================================================
