@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Budget Optimizer - {{ portfolio.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <nav class="text-sm breadcrumbs mb-2">
+                <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">Dashboard</a>
+                <span class="mx-2">/</span>
+                <a href="{{ url_for('portfolio_detail', portfolio_id=portfolio.id) }}" class="text-blue-600 hover:underline">{{ portfolio.name }}</a>
+                <span class="mx-2">/</span>
+                <span class="text-gray-600">Budget Optimizer</span>
+            </nav>
+            <h1 class="text-3xl font-bold text-gray-900">Budget Allocation Optimizer</h1>
+            <p class="text-gray-600 mt-1">Value-based budget optimization and multi-year planning</p>
+        </div>
+        <div class="flex gap-3">
+            <input type="number" id="totalBudget" value="1000000" class="border rounded-lg px-3 py-2 w-40" placeholder="Total Budget">
+            <button onclick="optimizeBudget()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                Optimize
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500">Total Budget</div>
+            <div class="text-3xl font-bold text-gray-900" id="totalBudgetDisplay">$1,000,000</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500">Allocated</div>
+            <div class="text-3xl font-bold text-blue-600" id="allocatedAmount">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500">Expected ROI</div>
+            <div class="text-3xl font-bold text-green-600" id="expectedRoi">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500">Value Score</div>
+            <div class="text-3xl font-bold text-purple-600" id="valueScore">-</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="flex border-b">
+            <button onclick="showTab('allocation')" id="tab-allocation" class="px-6 py-3 font-medium text-blue-600 border-b-2 border-blue-600">Allocation</button>
+            <button onclick="showTab('whatif')" id="tab-whatif" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">What-If Scenarios</button>
+            <button onclick="showTab('multiyear')" id="tab-multiyear" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">Multi-Year Plan</button>
+            <button onclick="showTab('insights')" id="tab-insights" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">Insights</button>
+        </div>
+
+        <!-- Allocation Tab -->
+        <div id="content-allocation" class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="lg:col-span-2">
+                    <h3 class="text-lg font-semibold mb-4">Budget Allocation by Application</h3>
+                    <canvas id="allocationChart" height="300"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Category Breakdown</h3>
+                    <canvas id="categoryChart" height="300"></canvas>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Application</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recommended</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Change</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ROI</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allocationTableBody" class="divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- What-If Tab -->
+        <div id="content-whatif" class="p-6 hidden">
+            <h3 class="text-lg font-semibold mb-4">Budget Scenario Comparison</h3>
+            <canvas id="whatifChart" height="300"></canvas>
+            <div id="scenarioCards" class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-6"></div>
+        </div>
+
+        <!-- Multi-Year Tab -->
+        <div id="content-multiyear" class="p-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Value Trajectory</h3>
+                    <canvas id="valueTrajectoryChart" height="250"></canvas>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Risk Trajectory</h3>
+                    <canvas id="riskTrajectoryChart" height="250"></canvas>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="p-4 bg-blue-50 rounded-lg text-center">
+                    <div class="text-sm text-blue-600">Cumulative Investment</div>
+                    <div class="text-2xl font-bold text-blue-700" id="cumulativeInvestment">-</div>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg text-center">
+                    <div class="text-sm text-green-600">Cumulative Savings</div>
+                    <div class="text-2xl font-bold text-green-700" id="cumulativeSavings">-</div>
+                </div>
+                <div class="p-4 bg-purple-50 rounded-lg text-center">
+                    <div class="text-sm text-purple-600">Cumulative ROI</div>
+                    <div class="text-2xl font-bold text-purple-700" id="cumulativeRoi">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights Tab -->
+        <div id="content-insights" class="p-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Key Insights</h3>
+                    <div id="insightsList" class="space-y-3"></div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Quick Wins</h3>
+                    <div id="quickWinsList" class="space-y-3"></div>
+                </div>
+            </div>
+            <div class="mt-6">
+                <h3 class="text-lg font-semibold mb-4">Recommended Changes</h3>
+                <div id="recommendedChanges" class="overflow-x-auto"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const portfolioId = "{{ portfolio.id }}";
+let optimizationResult = null;
+let charts = {};
+
+function showTab(tab) {
+    document.querySelectorAll('[id^="content-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('[id^="tab-"]').forEach(el => {
+        el.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+        el.classList.add('text-gray-500');
+    });
+    document.getElementById('content-' + tab).classList.remove('hidden');
+    const tabEl = document.getElementById('tab-' + tab);
+    tabEl.classList.remove('text-gray-500');
+    tabEl.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+}
+
+async function optimizeBudget() {
+    const totalBudget = parseInt(document.getElementById('totalBudget').value) || 1000000;
+    document.getElementById('totalBudgetDisplay').textContent = '$' + totalBudget.toLocaleString();
+
+    try {
+        const response = await fetch(`/api/budget/${portfolioId}/optimize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ total_budget: totalBudget, include_what_if: true, include_multi_year: true })
+        });
+        optimizationResult = await response.json();
+        renderOptimization(optimizationResult);
+    } catch (error) {
+        console.error('Error optimizing budget:', error);
+    }
+}
+
+function renderOptimization(result) {
+    const base = result.base_scenario;
+
+    // Summary
+    document.getElementById('allocatedAmount').textContent = '$' + base.total_allocated.toLocaleString();
+    document.getElementById('expectedRoi').textContent = base.expected_total_roi.toFixed(0) + '%';
+    document.getElementById('valueScore').textContent = (base.value_score * 100).toFixed(0) + '%';
+
+    // Allocation chart
+    renderAllocationChart(base.allocations);
+    renderCategoryChart(base.allocations);
+    renderAllocationTable(base.allocations);
+
+    // What-if
+    if (result.alternative_scenarios) {
+        renderWhatIfChart(result.alternative_scenarios);
+        renderScenarioCards(result.alternative_scenarios);
+    }
+
+    // Multi-year
+    if (result.multi_year_plan) {
+        renderMultiYearPlan(result.multi_year_plan);
+    }
+
+    // Insights
+    renderInsights(result);
+}
+
+function renderAllocationChart(allocations) {
+    const ctx = document.getElementById('allocationChart').getContext('2d');
+    if (charts.allocation) charts.allocation.destroy();
+
+    const top10 = [...allocations].sort((a, b) => b.recommended_budget - a.recommended_budget).slice(0, 10);
+
+    charts.allocation = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: top10.map(a => a.app_name.substring(0, 15)),
+            datasets: [
+                { label: 'Current', data: top10.map(a => a.current_budget), backgroundColor: '#9CA3AF' },
+                { label: 'Recommended', data: top10.map(a => a.recommended_budget), backgroundColor: '#3B82F6' }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    });
+}
+
+function renderCategoryChart(allocations) {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    if (charts.category) charts.category.destroy();
+
+    const totals = allocations.reduce((acc, a) => {
+        acc.maintenance += a.maintenance_budget;
+        acc.enhancement += a.enhancement_budget;
+        acc.modernization += a.modernization_budget;
+        return acc;
+    }, { maintenance: 0, enhancement: 0, modernization: 0 });
+
+    charts.category = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Maintenance', 'Enhancement', 'Modernization'],
+            datasets: [{ data: Object.values(totals), backgroundColor: ['#6B7280', '#3B82F6', '#10B981'] }]
+        },
+        options: { responsive: true }
+    });
+}
+
+function renderAllocationTable(allocations) {
+    const tbody = document.getElementById('allocationTableBody');
+    const sorted = [...allocations].sort((a, b) => Math.abs(b.change_percentage) - Math.abs(a.change_percentage));
+
+    tbody.innerHTML = sorted.slice(0, 15).map(a => `
+        <tr>
+            <td class="px-4 py-3 font-medium">${a.app_name}</td>
+            <td class="px-4 py-3 text-gray-600">$${a.current_budget.toLocaleString()}</td>
+            <td class="px-4 py-3 font-medium">$${a.recommended_budget.toLocaleString()}</td>
+            <td class="px-4 py-3">
+                <span class="${a.change_percentage > 0 ? 'text-green-600' : a.change_percentage < 0 ? 'text-red-600' : 'text-gray-500'}">
+                    ${a.change_percentage > 0 ? '+' : ''}${a.change_percentage.toFixed(0)}%
+                </span>
+            </td>
+            <td class="px-4 py-3">${(a.expected_roi * 100).toFixed(0)}%</td>
+            <td class="px-4 py-3 text-sm text-gray-500">${a.allocation_rationale}</td>
+        </tr>
+    `).join('');
+}
+
+function renderWhatIfChart(scenarios) {
+    const ctx = document.getElementById('whatifChart').getContext('2d');
+    if (charts.whatif) charts.whatif.destroy();
+
+    charts.whatif = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: scenarios.map(s => s.scenario_name),
+            datasets: [
+                { label: 'Value Score', data: scenarios.map(s => s.value_score * 100), backgroundColor: '#3B82F6' },
+                { label: 'Expected ROI', data: scenarios.map(s => s.expected_total_roi), backgroundColor: '#10B981' }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    });
+}
+
+function renderScenarioCards(scenarios) {
+    const container = document.getElementById('scenarioCards');
+    container.innerHTML = scenarios.map(s => `
+        <div class="p-4 border rounded-lg ${s.scenario_name.includes('0%') ? 'bg-blue-50 border-blue-200' : ''}">
+            <div class="font-semibold text-center">${s.scenario_name}</div>
+            <div class="text-center text-2xl font-bold mt-2">$${s.total_allocated.toLocaleString()}</div>
+            <div class="text-center text-sm text-gray-500">ROI: ${s.expected_total_roi.toFixed(0)}%</div>
+        </div>
+    `).join('');
+}
+
+function renderMultiYearPlan(plan) {
+    document.getElementById('cumulativeInvestment').textContent = '$' + plan.cumulative_investment.toLocaleString();
+    document.getElementById('cumulativeSavings').textContent = '$' + plan.cumulative_savings.toLocaleString();
+    document.getElementById('cumulativeRoi').textContent = plan.cumulative_roi.toFixed(0) + '%';
+
+    // Value trajectory
+    const ctx1 = document.getElementById('valueTrajectoryChart').getContext('2d');
+    if (charts.valueTrajectory) charts.valueTrajectory.destroy();
+    charts.valueTrajectory = new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: plan.value_trajectory.map((_, i) => `Year ${i + 1}`),
+            datasets: [{ label: 'Value Score', data: plan.value_trajectory.map(v => v * 100), borderColor: '#3B82F6', fill: false }]
+        },
+        options: { responsive: true }
+    });
+
+    // Risk trajectory
+    const ctx2 = document.getElementById('riskTrajectoryChart').getContext('2d');
+    if (charts.riskTrajectory) charts.riskTrajectory.destroy();
+    charts.riskTrajectory = new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: plan.risk_trajectory.map((_, i) => `Year ${i + 1}`),
+            datasets: [{ label: 'Risk Score', data: plan.risk_trajectory.map(v => v * 100), borderColor: '#EF4444', fill: false }]
+        },
+        options: { responsive: true }
+    });
+}
+
+function renderInsights(result) {
+    const insightsList = document.getElementById('insightsList');
+    insightsList.innerHTML = (result.key_insights || []).map(insight => `
+        <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <span class="text-blue-700">${insight}</span>
+        </div>
+    `).join('') || '<p class="text-gray-500">No insights available</p>';
+
+    const quickWinsList = document.getElementById('quickWinsList');
+    quickWinsList.innerHTML = (result.quick_wins || []).map(win => `
+        <div class="p-3 bg-green-50 rounded-lg border border-green-100">
+            <div class="font-medium text-green-800">${win.app_name}</div>
+            <div class="text-sm text-green-600">Investment: $${win.investment.toLocaleString()} | ROI: ${(win.expected_roi * 100).toFixed(0)}%</div>
+        </div>
+    `).join('') || '<p class="text-gray-500">No quick wins identified</p>';
+
+    const changesDiv = document.getElementById('recommendedChanges');
+    changesDiv.innerHTML = `
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Application</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Current</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Recommended</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Change</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">Rationale</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                ${(result.recommended_changes || []).map(c => `
+                    <tr>
+                        <td class="px-4 py-2 font-medium">${c.app_name}</td>
+                        <td class="px-4 py-2">$${c.current.toLocaleString()}</td>
+                        <td class="px-4 py-2">$${c.recommended.toLocaleString()}</td>
+                        <td class="px-4 py-2 ${c.change > 0 ? 'text-green-600' : 'text-red-600'}">${c.change_percentage > 0 ? '+' : ''}${c.change_percentage.toFixed(0)}%</td>
+                        <td class="px-4 py-2 text-sm text-gray-500">${c.rationale}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+optimizeBudget();
+</script>
+{% endblock %}

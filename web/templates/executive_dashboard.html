@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Executive Dashboard - {{ portfolio.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <nav class="text-sm breadcrumbs mb-2">
+                <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">Dashboard</a>
+                <span class="mx-2">/</span>
+                <a href="{{ url_for('portfolio_detail', portfolio_id=portfolio.id) }}" class="text-blue-600 hover:underline">{{ portfolio.name }}</a>
+                <span class="mx-2">/</span>
+                <span class="text-gray-600">Executive Dashboard</span>
+            </nav>
+            <h1 class="text-3xl font-bold text-gray-900">Executive Portfolio Dashboard</h1>
+            <p class="text-gray-600 mt-1">Strategic insights and portfolio health at a glance</p>
+        </div>
+        <div>
+            <button onclick="exportDashboard()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200">
+                Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Health Scorecard -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6 mb-8 text-white">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2 class="text-xl font-semibold mb-1">Portfolio Health Score</h2>
+                <p class="text-blue-100">Overall portfolio assessment</p>
+            </div>
+            <div class="text-right">
+                <div class="text-5xl font-bold" id="overallScore">--</div>
+                <div class="text-blue-200" id="healthStatus">Loading...</div>
+            </div>
+        </div>
+        <div class="grid grid-cols-6 gap-4 mt-6">
+            <div class="text-center">
+                <div class="text-2xl font-bold" id="costEfficiency">--</div>
+                <div class="text-xs text-blue-200">Cost Efficiency</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold" id="techHealth">--</div>
+                <div class="text-xs text-blue-200">Technical Health</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold" id="bizAlignment">--</div>
+                <div class="text-xs text-blue-200">Business Alignment</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold" id="securityPosture">--</div>
+                <div class="text-xs text-blue-200">Security Posture</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold" id="opStability">--</div>
+                <div class="text-xs text-blue-200">Op. Stability</div>
+            </div>
+            <div class="text-center">
+                <div class="text-2xl font-bold" id="innovation">--</div>
+                <div class="text-xs text-blue-200">Innovation Ready</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500">Total Applications</div>
+                <span class="text-blue-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path></svg>
+                </span>
+            </div>
+            <div class="text-3xl font-bold text-gray-900 mt-2" id="totalApps">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500">Annual Cost</div>
+                <span class="text-green-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </span>
+            </div>
+            <div class="text-3xl font-bold text-gray-900 mt-2" id="annualCost">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500">Potential Savings</div>
+                <span class="text-emerald-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                </span>
+            </div>
+            <div class="text-3xl font-bold text-green-600 mt-2" id="potentialSavings">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-500">Projected ROI</div>
+                <span class="text-purple-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </span>
+            </div>
+            <div class="text-3xl font-bold text-purple-600 mt-2" id="projectedRoi">-</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Cost Distribution by Category</h3>
+            <canvas id="costCategoryChart" height="250"></canvas>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Investment Allocation</h3>
+            <canvas id="investmentChart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Trends and Recommendations -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Cost Trend -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Cost Trend</h3>
+            <canvas id="costTrendChart" height="200"></canvas>
+        </div>
+
+        <!-- Health Trend -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Health Trend</h3>
+            <canvas id="healthTrendChart" height="200"></canvas>
+        </div>
+
+        <!-- Strategic Recommendations -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Strategic Recommendations</h3>
+            <div id="recommendations" class="space-y-3">
+                <p class="text-gray-500 text-center py-4">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Lists -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Top Cost Applications</h3>
+            <div id="topCostApps" class="space-y-3"></div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Top Risk Applications</h3>
+            <div id="topRiskApps" class="space-y-3"></div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h3 class="text-lg font-semibold mb-4">Top Opportunities</h3>
+            <div id="topOpportunities" class="space-y-3"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const portfolioId = "{{ portfolio.id }}";
+let dashboardData = null;
+
+async function loadDashboard() {
+    try {
+        const response = await fetch(`/api/portfolio-dashboard/${portfolioId}`);
+        dashboardData = await response.json();
+        renderDashboard(dashboardData);
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+    }
+}
+
+function renderDashboard(data) {
+    // Scorecard
+    const scorecard = data.scorecard;
+    document.getElementById('overallScore').textContent = scorecard.overall_score.toFixed(0);
+    document.getElementById('healthStatus').textContent = scorecard.overall_status.replace('_', ' ').toUpperCase();
+    document.getElementById('costEfficiency').textContent = scorecard.cost_efficiency.toFixed(0) + '%';
+    document.getElementById('techHealth').textContent = scorecard.technical_health.toFixed(0) + '%';
+    document.getElementById('bizAlignment').textContent = scorecard.business_alignment.toFixed(0) + '%';
+    document.getElementById('securityPosture').textContent = scorecard.security_posture.toFixed(0) + '%';
+    document.getElementById('opStability').textContent = scorecard.operational_stability.toFixed(0) + '%';
+    document.getElementById('innovation').textContent = scorecard.innovation_readiness.toFixed(0) + '%';
+
+    // Summary
+    const summary = data.summary;
+    document.getElementById('totalApps').textContent = summary.total_applications;
+    document.getElementById('annualCost').textContent = '$' + summary.total_annual_cost.toLocaleString();
+    document.getElementById('potentialSavings').textContent = '$' + summary.potential_savings.toLocaleString();
+    document.getElementById('projectedRoi').textContent = summary.projected_roi.toFixed(0) + '%';
+
+    // Charts
+    renderCostCategoryChart(data.cost_by_category);
+    renderInvestmentChart(data.investment);
+    if (data.cost_trend) renderTrendChart('costTrendChart', data.cost_trend, '#3B82F6');
+    if (data.health_trend) renderTrendChart('healthTrendChart', data.health_trend, '#10B981');
+
+    // Lists
+    renderTopCostApps(summary.top_cost_apps);
+    renderTopRiskApps(summary.top_risk_apps);
+    renderOpportunities(summary.top_opportunities);
+    renderRecommendations(data.recommendations);
+}
+
+function renderCostCategoryChart(costByCategory) {
+    const ctx = document.getElementById('costCategoryChart').getContext('2d');
+    const labels = Object.keys(costByCategory);
+    const values = Object.values(costByCategory);
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: colors.slice(0, labels.length) }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'right' } } }
+    });
+}
+
+function renderInvestmentChart(investment) {
+    const ctx = document.getElementById('investmentChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Run', 'Grow', 'Transform'],
+            datasets: [
+                {
+                    label: 'Current',
+                    data: [investment.run_percentage, investment.grow_percentage, investment.transform_percentage],
+                    backgroundColor: '#3B82F6'
+                },
+                {
+                    label: 'Recommended',
+                    data: [investment.recommended_run, investment.recommended_grow, investment.recommended_transform],
+                    backgroundColor: '#10B981'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true, max: 100 } }
+        }
+    });
+}
+
+function renderTrendChart(canvasId, trend, color) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const historical = trend.historical_data || [];
+    const forecast = trend.forecast_data || [];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [...historical.map(d => d.period), ...forecast.map(d => d.period)],
+            datasets: [{
+                label: trend.metric_name,
+                data: [...historical.map(d => d.value), ...forecast.map(d => d.value)],
+                borderColor: color,
+                backgroundColor: color + '20',
+                fill: true,
+                tension: 0.3,
+                segment: {
+                    borderDash: ctx => historical.length <= ctx.p0DataIndex ? [5, 5] : undefined
+                }
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+}
+
+function renderTopCostApps(apps) {
+    const container = document.getElementById('topCostApps');
+    container.innerHTML = apps.slice(0, 5).map((app, idx) => `
+        <div class="flex justify-between items-center p-2 ${idx % 2 === 0 ? 'bg-gray-50' : ''} rounded">
+            <span class="font-medium">${app.app_name}</span>
+            <span class="text-gray-600">$${app.annual_cost.toLocaleString()}</span>
+        </div>
+    `).join('') || '<p class="text-gray-500 text-center">No data</p>';
+}
+
+function renderTopRiskApps(apps) {
+    const container = document.getElementById('topRiskApps');
+    container.innerHTML = apps.slice(0, 5).map((app, idx) => `
+        <div class="flex justify-between items-center p-2 ${idx % 2 === 0 ? 'bg-gray-50' : ''} rounded">
+            <span class="font-medium">${app.app_name}</span>
+            <span class="px-2 py-1 rounded text-xs ${app.severity === 'critical' ? 'bg-red-100 text-red-700' : app.severity === 'high' ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}">${app.score.toFixed(0)}%</span>
+        </div>
+    `).join('') || '<p class="text-gray-500 text-center">No data</p>';
+}
+
+function renderOpportunities(opportunities) {
+    const container = document.getElementById('topOpportunities');
+    container.innerHTML = opportunities.slice(0, 5).map((opp, idx) => `
+        <div class="p-2 ${idx % 2 === 0 ? 'bg-gray-50' : ''} rounded">
+            <div class="font-medium">${opp.app_name}</div>
+            <div class="flex justify-between text-sm">
+                <span class="text-gray-500">${opp.action}</span>
+                <span class="text-green-600">$${opp.potential_savings.toLocaleString()}</span>
+            </div>
+        </div>
+    `).join('') || '<p class="text-gray-500 text-center">No opportunities</p>';
+}
+
+function renderRecommendations(recommendations) {
+    const container = document.getElementById('recommendations');
+    container.innerHTML = recommendations.slice(0, 4).map((rec, idx) => `
+        <div class="p-3 border rounded-lg ${idx === 0 ? 'border-blue-200 bg-blue-50' : ''}">
+            <div class="flex items-start gap-2">
+                <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">${rec.priority}</span>
+                <div>
+                    <div class="font-medium text-sm">${rec.title}</div>
+                    <div class="text-xs text-gray-500">${rec.impact} impact | ${rec.timeline}</div>
+                </div>
+            </div>
+        </div>
+    `).join('') || '<p class="text-gray-500 text-center">No recommendations</p>';
+}
+
+function exportDashboard() {
+    window.print();
+}
+
+loadDashboard();
+</script>
+{% endblock %}

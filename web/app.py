@@ -30,7 +30,21 @@ from rationalization import (
     create_demo_dependencies, create_demo_integrations, create_demo_vendors,
     # Tier 2: Lifecycle Management
     LifecycleManager, LifecycleStage, TransitionStatus, HealthStatus,
-    SunsetReason, StageMetrics, create_lifecycle_manager, create_demo_lifecycles
+    SunsetReason, StageMetrics, create_lifecycle_manager, create_demo_lifecycles,
+    # Tier 3: ML Clustering
+    MLClusteringEngine, ClusteringMethod, ApplicationFeatures,
+    create_clustering_engine, create_demo_applications,
+    # Tier 3: Migration Planner
+    MigrationPlanner, MigrationStrategy, CloudProvider, MigrationComplexity,
+    ApplicationMigrationProfile, create_migration_planner, create_demo_migration_profiles,
+    # Tier 3: Portfolio Dashboard
+    PortfolioDashboardEngine, ApplicationData, create_portfolio_dashboard_engine, create_demo_portfolio_data,
+    # Tier 3: Budget Optimizer
+    BudgetOptimizer, OptimizationObjective, AllocationStrategy,
+    ApplicationBudgetProfile, create_budget_optimizer, create_demo_budget_profiles,
+    # Tier 3: Risk Heat Maps
+    RiskHeatMapEngine, RiskCategory, RiskSeverity,
+    ApplicationRiskProfile, create_risk_heatmap_engine, create_demo_risk_profiles
 )
 
 # Configure logging
@@ -2311,6 +2325,192 @@ def lifecycle_page(portfolio_id):
     portfolio = Portfolio.query.get_or_404(portfolio_id)
     applications = portfolio.applications.all()
     return render_template('lifecycle.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# TIER 3: ML CLUSTERING API
+# =============================================================================
+
+@app.route('/api/clustering/<portfolio_id>/analyze', methods=['POST'])
+def api_clustering_analyze(portfolio_id):
+    """Run ML clustering analysis on portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    engine = create_clustering_engine()
+
+    if not applications:
+        demo_apps = create_demo_applications(25)
+        engine.add_applications(demo_apps)
+    else:
+        for app in applications:
+            features = ApplicationFeatures(
+                app_id=str(app.id), app_name=app.name,
+                business_value=app.business_value / 100 if app.business_value else 0.5,
+                technical_health=app.technical_health / 100 if app.technical_health else 0.5,
+                cost_efficiency=0.5, risk_score=app.risk_score / 100 if app.risk_score else 0.3,
+                user_adoption=0.5, integration_complexity=0.5, compliance_score=0.7, modernization_readiness=0.5,
+                category=app.category or '', vendor=app.vendor or '',
+                annual_cost=app.cost or 0, user_count=app.user_base_size or 0
+            )
+            engine.add_application(features)
+
+    data = request.get_json() or {}
+    result = engine.cluster_applications(method=ClusteringMethod.KMEANS, num_clusters=data.get('num_clusters'))
+    return jsonify(result.to_dict())
+
+
+@app.route('/clustering/<portfolio_id>')
+def clustering_page(portfolio_id):
+    """ML Clustering analysis page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    return render_template('clustering.html', portfolio=portfolio, applications=portfolio.applications.all())
+
+
+# =============================================================================
+# TIER 3: MIGRATION PLANNER API
+# =============================================================================
+
+@app.route('/api/migration/<portfolio_id>/plan', methods=['POST'])
+def api_migration_plan(portfolio_id):
+    """Generate migration plan for portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    data = request.get_json() or {}
+    provider = CloudProvider(data.get('provider', 'aws')) if data.get('provider') in [p.value for p in CloudProvider] else CloudProvider.AWS
+    planner = create_migration_planner(preferred_provider=provider)
+
+    applications = portfolio.applications.all()
+    if not applications:
+        planner.add_applications(create_demo_migration_profiles(15))
+    else:
+        for app in applications:
+            profile = ApplicationMigrationProfile(
+                app_id=str(app.id), app_name=app.name,
+                cloud_readiness=app.technical_health / 100 if app.technical_health else 0.5,
+                business_criticality=app.business_value / 100 if app.business_value else 0.5,
+                technical_debt=1 - (app.technical_health / 100) if app.technical_health else 0.3,
+                current_annual_cost=app.cost or 0, estimated_users=app.user_base_size or 0
+            )
+            planner.add_application(profile)
+
+    plan = planner.create_migration_plan(portfolio_name=portfolio.name)
+    return jsonify(plan.to_dict())
+
+
+@app.route('/migration/<portfolio_id>')
+def migration_page(portfolio_id):
+    """Migration planner page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    return render_template('migration.html', portfolio=portfolio, applications=portfolio.applications.all())
+
+
+# =============================================================================
+# TIER 3: PORTFOLIO DASHBOARD API
+# =============================================================================
+
+@app.route('/api/portfolio-dashboard/<portfolio_id>')
+def api_portfolio_dashboard(portfolio_id):
+    """Get executive portfolio dashboard data."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    engine = create_portfolio_dashboard_engine()
+
+    applications = portfolio.applications.all()
+    if not applications:
+        engine.add_applications(create_demo_portfolio_data(25))
+    else:
+        for app in applications:
+            app_data = ApplicationData(
+                app_id=str(app.id), app_name=app.name,
+                annual_cost=app.cost or 0, user_count=app.user_base_size or 0, age_years=3.0,
+                business_value=app.business_value / 100 if app.business_value else 0.5,
+                technical_health=app.technical_health / 100 if app.technical_health else 0.5,
+                risk_score=app.risk_score / 100 if app.risk_score else 0.3,
+                time_recommendation=app.time_category or 'tolerate',
+                category=app.category or '', vendor=app.vendor or ''
+            )
+            engine.add_application(app_data)
+
+    dashboard = engine.generate_dashboard(portfolio_id, portfolio.name)
+    return jsonify(dashboard.to_dict())
+
+
+@app.route('/executive-dashboard/<portfolio_id>')
+def executive_dashboard_page(portfolio_id):
+    """Executive portfolio dashboard page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    return render_template('executive_dashboard.html', portfolio=portfolio, applications=portfolio.applications.all())
+
+
+# =============================================================================
+# TIER 3: BUDGET OPTIMIZER API
+# =============================================================================
+
+@app.route('/api/budget/<portfolio_id>/optimize', methods=['POST'])
+def api_budget_optimize(portfolio_id):
+    """Optimize budget allocation for portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    data = request.get_json() or {}
+    total_budget = data.get('total_budget', 1000000)
+    optimizer = create_budget_optimizer()
+
+    applications = portfolio.applications.all()
+    if not applications:
+        optimizer.add_applications(create_demo_budget_profiles(20))
+    else:
+        for app in applications:
+            profile = ApplicationBudgetProfile(
+                app_id=str(app.id), app_name=app.name,
+                current_budget=app.cost or 50000, current_cost=app.cost or 50000,
+                business_value=app.business_value / 100 if app.business_value else 0.5,
+                technical_health=app.technical_health / 100 if app.technical_health else 0.5,
+                risk_score=app.risk_score / 100 if app.risk_score else 0.3,
+                category=app.category or ''
+            )
+            optimizer.add_application(profile)
+
+    result = optimizer.full_optimization(total_budget=total_budget,
+        include_what_if=data.get('include_what_if', True),
+        include_multi_year=data.get('include_multi_year', True))
+    return jsonify(result.to_dict())
+
+
+@app.route('/budget/<portfolio_id>')
+def budget_page(portfolio_id):
+    """Budget optimization page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    return render_template('budget.html', portfolio=portfolio, applications=portfolio.applications.all())
+
+
+# =============================================================================
+# TIER 3: RISK HEAT MAP API
+# =============================================================================
+
+@app.route('/api/risk-heatmap/<portfolio_id>')
+def api_risk_heatmap(portfolio_id):
+    """Get risk heat map data for portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    engine = create_risk_heatmap_engine()
+
+    applications = portfolio.applications.all()
+    if not applications:
+        engine.add_applications(create_demo_risk_profiles(25))
+    else:
+        for app in applications:
+            profile = create_demo_risk_profiles(1)[0]
+            profile.app_id = str(app.id)
+            profile.app_name = app.name
+            profile.category = app.category or 'General'
+            profile.vendor = app.vendor or 'Unknown'
+            engine.add_application(profile)
+
+    result = engine.generate_analysis()
+    return jsonify(result.to_dict())
+
+
+@app.route('/risk-heatmap/<portfolio_id>')
+def risk_heatmap_page(portfolio_id):
+    """Risk heat map page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    return render_template('risk_heatmap.html', portfolio=portfolio, applications=portfolio.applications.all())
 
 
 # =============================================================================

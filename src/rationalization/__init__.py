@@ -77,6 +77,85 @@ from .lifecycle_manager import (
     create_demo_lifecycles
 )
 
+# Tier 3: ML Clustering
+from .ml_clustering import (
+    MLClusteringEngine,
+    ClusteringMethod,
+    DistanceMetric,
+    ClusterCharacteristic,
+    ApplicationFeatures,
+    Cluster,
+    ClusteringResult,
+    create_clustering_engine,
+    create_demo_applications
+)
+
+# Tier 3: Migration Planner
+from .migration_planner import (
+    MigrationPlanner,
+    MigrationStrategy,
+    CloudProvider,
+    MigrationComplexity,
+    MigrationPhase,
+    ApplicationMigrationProfile,
+    MigrationRecommendation,
+    MigrationWave,
+    MigrationPlan,
+    create_migration_planner,
+    create_demo_migration_profiles
+)
+
+# Tier 3: Portfolio Dashboard
+from .portfolio_dashboard import (
+    PortfolioDashboardEngine,
+    HealthStatus as DashboardHealthStatus,
+    TrendDirection,
+    InvestmentCategory,
+    PortfolioMetric,
+    HealthScorecard,
+    ExecutiveSummary,
+    TrendAnalysis,
+    InvestmentAllocation,
+    StrategicRecommendation,
+    ApplicationData,
+    PortfolioDashboard,
+    create_portfolio_dashboard_engine,
+    create_demo_portfolio_data
+)
+
+# Tier 3: Budget Allocation Optimizer
+from .budget_optimizer import (
+    BudgetOptimizer,
+    BudgetCategory,
+    OptimizationObjective,
+    AllocationStrategy,
+    ApplicationBudgetProfile,
+    BudgetAllocation,
+    OptimizationScenario,
+    MultiYearPlan,
+    OptimizationResult,
+    create_budget_optimizer,
+    create_demo_budget_profiles
+)
+
+# Tier 3: Risk Heat Maps
+from .risk_heatmap import (
+    RiskHeatMapEngine,
+    RiskCategory,
+    RiskSeverity,
+    TrendIndicator,
+    RiskDimension,
+    ApplicationRiskProfile,
+    HeatMapCell,
+    HeatMapData,
+    RiskCorrelation,
+    RiskAlert,
+    RiskSummary,
+    RiskHeatMapResult,
+    create_risk_heatmap_engine,
+    create_demo_risk_profiles
+)
+
 __all__ = [
     # Enterprise engines
     'ScoringEngine',
@@ -144,7 +223,71 @@ __all__ = [
     'SunsetPlan',
     'AppLifecycle',
     'create_lifecycle_manager',
-    'create_demo_lifecycles'
+    'create_demo_lifecycles',
+    # Tier 3: ML Clustering
+    'MLClusteringEngine',
+    'ClusteringMethod',
+    'DistanceMetric',
+    'ClusterCharacteristic',
+    'ApplicationFeatures',
+    'Cluster',
+    'ClusteringResult',
+    'create_clustering_engine',
+    'create_demo_applications',
+    # Tier 3: Migration Planner
+    'MigrationPlanner',
+    'MigrationStrategy',
+    'CloudProvider',
+    'MigrationComplexity',
+    'MigrationPhase',
+    'ApplicationMigrationProfile',
+    'MigrationRecommendation',
+    'MigrationWave',
+    'MigrationPlan',
+    'create_migration_planner',
+    'create_demo_migration_profiles',
+    # Tier 3: Portfolio Dashboard
+    'PortfolioDashboardEngine',
+    'DashboardHealthStatus',
+    'TrendDirection',
+    'InvestmentCategory',
+    'PortfolioMetric',
+    'HealthScorecard',
+    'ExecutiveSummary',
+    'TrendAnalysis',
+    'InvestmentAllocation',
+    'StrategicRecommendation',
+    'ApplicationData',
+    'PortfolioDashboard',
+    'create_portfolio_dashboard_engine',
+    'create_demo_portfolio_data',
+    # Tier 3: Budget Optimizer
+    'BudgetOptimizer',
+    'BudgetCategory',
+    'OptimizationObjective',
+    'AllocationStrategy',
+    'ApplicationBudgetProfile',
+    'BudgetAllocation',
+    'OptimizationScenario',
+    'MultiYearPlan',
+    'OptimizationResult',
+    'create_budget_optimizer',
+    'create_demo_budget_profiles',
+    # Tier 3: Risk Heat Maps
+    'RiskHeatMapEngine',
+    'RiskCategory',
+    'RiskSeverity',
+    'TrendIndicator',
+    'RiskDimension',
+    'ApplicationRiskProfile',
+    'HeatMapCell',
+    'HeatMapData',
+    'RiskCorrelation',
+    'RiskAlert',
+    'RiskSummary',
+    'RiskHeatMapResult',
+    'create_risk_heatmap_engine',
+    'create_demo_risk_profiles'
 ]
 
 

@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}ML Clustering - {{ portfolio.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <nav class="text-sm breadcrumbs mb-2">
+                <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">Dashboard</a>
+                <span class="mx-2">/</span>
+                <a href="{{ url_for('portfolio_detail', portfolio_id=portfolio.id) }}" class="text-blue-600 hover:underline">{{ portfolio.name }}</a>
+                <span class="mx-2">/</span>
+                <span class="text-gray-600">ML Clustering</span>
+            </nav>
+            <h1 class="text-3xl font-bold text-gray-900">ML Clustering Analysis</h1>
+            <p class="text-gray-600 mt-1">Automated application grouping and consolidation opportunities</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="runClustering()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                Run Analysis
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500 mb-1">Total Clusters</div>
+            <div class="text-3xl font-bold text-gray-900" id="totalClusters">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500 mb-1">Consolidation Candidates</div>
+            <div class="text-3xl font-bold text-orange-600" id="consolidationCandidates">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500 mb-1">Silhouette Score</div>
+            <div class="text-3xl font-bold text-blue-600" id="silhouetteScore">-</div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div class="text-sm text-gray-500 mb-1">Potential Savings</div>
+            <div class="text-3xl font-bold text-green-600" id="potentialSavings">-</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Cluster Visualization -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4">Cluster Distribution</h2>
+            <canvas id="clusterChart" height="300"></canvas>
+        </div>
+
+        <!-- Cluster List -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4">Clusters</h2>
+            <div id="clusterList" class="space-y-4">
+                <p class="text-gray-500 text-center py-8">Run analysis to see clusters</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consolidation Opportunities -->
+    <div class="mt-6 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <h2 class="text-lg font-semibold mb-4">Consolidation Opportunities</h2>
+        <div id="opportunitiesTable" class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cluster</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Apps</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Potential</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Est. Savings</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="opportunitiesBody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">Run analysis to see opportunities</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Cluster Details Modal -->
+    <div id="clusterModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-xl bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold" id="modalTitle">Cluster Details</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">&times;</button>
+            </div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const portfolioId = "{{ portfolio.id }}";
+let clusterChart = null;
+let clusteringResult = null;
+
+async function runClustering() {
+    try {
+        const response = await fetch(`/api/clustering/${portfolioId}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ num_clusters: null })
+        });
+        clusteringResult = await response.json();
+        renderResults(clusteringResult);
+    } catch (error) {
+        console.error('Error running clustering:', error);
+    }
+}
+
+function renderResults(data) {
+    // Update summary cards
+    document.getElementById('totalClusters').textContent = data.num_clusters;
+    document.getElementById('consolidationCandidates').textContent = data.consolidation_candidates;
+    document.getElementById('silhouetteScore').textContent = data.overall_silhouette.toFixed(2);
+    document.getElementById('potentialSavings').textContent = '$' + data.total_consolidation_savings.toLocaleString();
+
+    // Render cluster chart
+    renderClusterChart(data.clusters);
+
+    // Render cluster list
+    renderClusterList(data.clusters);
+
+    // Render opportunities
+    renderOpportunities(data.clusters);
+}
+
+function renderClusterChart(clusters) {
+    const ctx = document.getElementById('clusterChart').getContext('2d');
+
+    if (clusterChart) clusterChart.destroy();
+
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+    clusterChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: clusters.map(c => c.name),
+            datasets: [{
+                data: clusters.map(c => c.application_count),
+                backgroundColor: colors.slice(0, clusters.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+}
+
+function renderClusterList(clusters) {
+    const container = document.getElementById('clusterList');
+    container.innerHTML = clusters.map((cluster, idx) => `
+        <div class="p-4 border rounded-lg cursor-pointer hover:bg-gray-50" onclick="showClusterDetails(${idx})">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="font-medium">${cluster.name}</div>
+                    <div class="text-sm text-gray-500">${cluster.application_count} apps</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-medium text-green-600">$${cluster.estimated_savings.toLocaleString()}</div>
+                    <div class="text-xs text-gray-500">potential savings</div>
+                </div>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-1">
+                ${cluster.characteristics.slice(0, 3).map(c => `
+                    <span class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">${c}</span>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderOpportunities(clusters) {
+    const opportunities = clusters.filter(c => c.consolidation_potential >= 0.3);
+    const tbody = document.getElementById('opportunitiesBody');
+
+    if (opportunities.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No significant consolidation opportunities found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = opportunities.map(opp => `
+        <tr>
+            <td class="px-4 py-4 font-medium">${opp.name}</td>
+            <td class="px-4 py-4">${opp.application_count}</td>
+            <td class="px-4 py-4">
+                <div class="flex items-center">
+                    <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: ${opp.consolidation_potential * 100}%"></div>
+                    </div>
+                    <span class="text-sm">${(opp.consolidation_potential * 100).toFixed(0)}%</span>
+                </div>
+            </td>
+            <td class="px-4 py-4 text-green-600 font-medium">$${opp.estimated_savings.toLocaleString()}</td>
+            <td class="px-4 py-4 text-sm">${opp.primary_action}</td>
+        </tr>
+    `).join('');
+}
+
+function showClusterDetails(idx) {
+    if (!clusteringResult) return;
+    const cluster = clusteringResult.clusters[idx];
+
+    document.getElementById('modalTitle').textContent = cluster.name;
+    document.getElementById('modalContent').innerHTML = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-3 bg-gray-50 rounded">
+                    <div class="text-sm text-gray-500">Applications</div>
+                    <div class="text-xl font-bold">${cluster.application_count}</div>
+                </div>
+                <div class="p-3 bg-gray-50 rounded">
+                    <div class="text-sm text-gray-500">Cohesion Score</div>
+                    <div class="text-xl font-bold">${cluster.cohesion_score.toFixed(2)}</div>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-medium mb-2">Characteristics</h4>
+                <div class="flex flex-wrap gap-2">
+                    ${cluster.characteristics.map(c => `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">${c}</span>`).join('')}
+                </div>
+            </div>
+            <div>
+                <h4 class="font-medium mb-2">Applications</h4>
+                <ul class="space-y-1 max-h-48 overflow-y-auto">
+                    ${cluster.applications.map(app => `
+                        <li class="text-sm p-2 bg-gray-50 rounded flex justify-between">
+                            <span>${app.app_name}</span>
+                            <span class="text-gray-500">$${app.annual_cost.toLocaleString()}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+            <div class="p-3 bg-green-50 rounded border border-green-200">
+                <div class="font-medium text-green-800">Recommended Action</div>
+                <p class="text-green-700">${cluster.primary_action}</p>
+                <p class="text-sm text-green-600 mt-1">Potential savings: $${cluster.estimated_savings.toLocaleString()}</p>
+            </div>
+        </div>
+    `;
+    document.getElementById('clusterModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('clusterModal').classList.add('hidden');
+}
+
+// Initial load
+runClustering();
+</script>
+{% endblock %}
