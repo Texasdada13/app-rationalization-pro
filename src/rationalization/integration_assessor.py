@@ -636,3 +636,100 @@ class IntegrationAssessor:
 def create_integration_assessor() -> IntegrationAssessor:
     """Create a new IntegrationAssessor instance"""
     return IntegrationAssessor()
+
+
+def create_demo_integrations() -> List[Integration]:
+    """Create demo integration data for testing and demonstration"""
+    demo_integrations = [
+        Integration(
+            id="int-001",
+            source_app_id="app-001",
+            source_app_name="Customer Portal",
+            target_app_id="app-002",
+            target_app_name="CRM System",
+            integration_type=IntegrationType.API_REST,
+            frequency="real_time",
+            data_sensitivity=DataSensitivity.SENSITIVE,
+            criticality="high",
+            health_score=8.5,
+            latency_ms=85,
+            error_rate_percent=0.2,
+            uptime_percent=99.8,
+            monitoring_enabled=True,
+            documentation_complete=True,
+            owner_team="Integration Team"
+        ),
+        Integration(
+            id="int-002",
+            source_app_id="app-002",
+            source_app_name="CRM System",
+            target_app_id="app-003",
+            target_app_name="Data Warehouse",
+            integration_type=IntegrationType.ETL_BATCH,
+            frequency="daily",
+            data_sensitivity=DataSensitivity.CONFIDENTIAL,
+            criticality="medium",
+            health_score=7.0,
+            latency_ms=350,
+            error_rate_percent=0.8,
+            uptime_percent=99.2,
+            monitoring_enabled=True,
+            documentation_complete=False,
+            owner_team="Data Team"
+        ),
+        Integration(
+            id="int-003",
+            source_app_id="app-001",
+            source_app_name="Customer Portal",
+            target_app_id="app-004",
+            target_app_name="Auth Service",
+            integration_type=IntegrationType.SSO_AUTH,
+            frequency="real_time",
+            data_sensitivity=DataSensitivity.RESTRICTED,
+            criticality="critical",
+            health_score=9.2,
+            latency_ms=45,
+            error_rate_percent=0.1,
+            uptime_percent=99.95,
+            monitoring_enabled=True,
+            documentation_complete=True,
+            owner_team="Security Team"
+        ),
+        Integration(
+            id="int-004",
+            source_app_id="app-003",
+            source_app_name="Data Warehouse",
+            target_app_id="app-005",
+            target_app_name="Analytics Dashboard",
+            integration_type=IntegrationType.DATABASE_DIRECT,
+            frequency="hourly",
+            data_sensitivity=DataSensitivity.INTERNAL,
+            criticality="medium",
+            health_score=6.5,
+            latency_ms=520,
+            error_rate_percent=1.2,
+            uptime_percent=98.5,
+            monitoring_enabled=False,
+            documentation_complete=False,
+            owner_team="BI Team"
+        ),
+        Integration(
+            id="int-005",
+            source_app_id="app-002",
+            source_app_name="CRM System",
+            target_app_id="app-006",
+            target_app_name="Email Service",
+            integration_type=IntegrationType.MESSAGE_QUEUE,
+            frequency="real_time",
+            data_sensitivity=DataSensitivity.SENSITIVE,
+            criticality="high",
+            health_score=7.8,
+            latency_ms=120,
+            error_rate_percent=0.5,
+            uptime_percent=99.5,
+            monitoring_enabled=True,
+            documentation_complete=True,
+            owner_team="Marketing Team"
+        ),
+    ]
+    return demo_integrations

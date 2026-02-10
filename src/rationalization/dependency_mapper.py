@@ -7,7 +7,53 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Tuple, Any
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum
 import uuid
+
+
+class DependencyType(Enum):
+    """Types of dependencies between applications"""
+    API = "api"
+    DATABASE = "database"
+    FILE_TRANSFER = "file_transfer"
+    AUTHENTICATION = "authentication"
+    MESSAGING = "messaging"
+    DATA_SYNC = "data_sync"
+    EMBEDDED = "embedded"
+    REPORTING = "reporting"
+
+
+class DependencyStrength(Enum):
+    """Strength/criticality of a dependency"""
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+@dataclass
+class Dependency:
+    """Represents a dependency relationship between applications"""
+    id: str
+    source_app_id: str
+    target_app_id: str
+    dependency_type: DependencyType = DependencyType.API
+    strength: DependencyStrength = DependencyStrength.MEDIUM
+    description: str = ""
+    data_flow: str = "unidirectional"  # unidirectional, bidirectional
+    created_at: datetime = field(default_factory=datetime.utcnow)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'id': self.id,
+            'source_app_id': self.source_app_id,
+            'target_app_id': self.target_app_id,
+            'dependency_type': self.dependency_type.value,
+            'strength': self.strength.value,
+            'description': self.description,
+            'data_flow': self.data_flow,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 
 @dataclass
@@ -638,3 +684,64 @@ class DependencyMapper:
 def create_dependency_mapper() -> DependencyMapper:
     """Create a new DependencyMapper instance"""
     return DependencyMapper()
+
+
+def create_demo_dependencies() -> List[Dependency]:
+    """Create demo dependency data for testing and demonstration"""
+    demo_deps = [
+        Dependency(
+            id="dep-001",
+            source_app_id="app-001",
+            target_app_id="app-002",
+            dependency_type=DependencyType.API,
+            strength=DependencyStrength.HIGH,
+            description="REST API for customer data",
+            data_flow="unidirectional"
+        ),
+        Dependency(
+            id="dep-002",
+            source_app_id="app-001",
+            target_app_id="app-003",
+            dependency_type=DependencyType.DATABASE,
+            strength=DependencyStrength.CRITICAL,
+            description="Shared customer database",
+            data_flow="bidirectional"
+        ),
+        Dependency(
+            id="dep-003",
+            source_app_id="app-002",
+            target_app_id="app-004",
+            dependency_type=DependencyType.AUTHENTICATION,
+            strength=DependencyStrength.HIGH,
+            description="SSO authentication service",
+            data_flow="unidirectional"
+        ),
+        Dependency(
+            id="dep-004",
+            source_app_id="app-003",
+            target_app_id="app-005",
+            dependency_type=DependencyType.FILE_TRANSFER,
+            strength=DependencyStrength.MEDIUM,
+            description="Nightly ETL data export",
+            data_flow="unidirectional"
+        ),
+        Dependency(
+            id="dep-005",
+            source_app_id="app-004",
+            target_app_id="app-005",
+            dependency_type=DependencyType.MESSAGING,
+            strength=DependencyStrength.MEDIUM,
+            description="Event queue integration",
+            data_flow="bidirectional"
+        ),
+        Dependency(
+            id="dep-006",
+            source_app_id="app-005",
+            target_app_id="app-001",
+            dependency_type=DependencyType.REPORTING,
+            strength=DependencyStrength.LOW,
+            description="Analytics dashboard feed",
+            data_flow="unidirectional"
+        ),
+    ]
+    return demo_deps

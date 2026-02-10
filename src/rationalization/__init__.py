@@ -34,7 +34,7 @@ from .integration_assessor import (
     IntegrationType,
     IntegrationHealth,
     Integration,
-    IntegrationAssessment,
+    IntegrationAssessmentResult,
     create_demo_integrations
 )
 from .vendor_risk_engine import (
@@ -82,7 +82,7 @@ __all__ = [
     'IntegrationType',
     'IntegrationHealth',
     'Integration',
-    'IntegrationAssessment',
+    'IntegrationAssessmentResult',
     'create_demo_integrations',
     # Tier 2: Vendor Risk Management
     'VendorRiskEngine',
