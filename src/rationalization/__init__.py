@@ -48,6 +48,35 @@ from .vendor_risk_engine import (
     create_demo_vendors
 )
 
+# Tier 2: Technical Debt Calculator
+from .tech_debt_calculator import (
+    TechDebtCalculator,
+    DebtCategory,
+    DebtSeverity,
+    DebtStatus,
+    DebtItem,
+    AppDebtProfile,
+    PortfolioDebtSummary,
+    create_tech_debt_calculator,
+    create_demo_tech_debt
+)
+
+# Tier 2: Application Lifecycle Management
+from .lifecycle_manager import (
+    LifecycleManager,
+    LifecycleStage,
+    TransitionStatus,
+    HealthStatus,
+    SunsetReason,
+    StageMetrics,
+    StageHistory,
+    TransitionRequest,
+    SunsetPlan,
+    AppLifecycle,
+    create_lifecycle_manager,
+    create_demo_lifecycles
+)
+
 __all__ = [
     # Enterprise engines
     'ScoringEngine',
@@ -92,7 +121,30 @@ __all__ = [
     'VendorComplianceFramework',
     'VendorProfile',
     'RiskAssessment',
-    'create_demo_vendors'
+    'create_demo_vendors',
+    # Tier 2: Technical Debt Calculator
+    'TechDebtCalculator',
+    'DebtCategory',
+    'DebtSeverity',
+    'DebtStatus',
+    'DebtItem',
+    'AppDebtProfile',
+    'PortfolioDebtSummary',
+    'create_tech_debt_calculator',
+    'create_demo_tech_debt',
+    # Tier 2: Application Lifecycle Management
+    'LifecycleManager',
+    'LifecycleStage',
+    'TransitionStatus',
+    'HealthStatus',
+    'SunsetReason',
+    'StageMetrics',
+    'StageHistory',
+    'TransitionRequest',
+    'SunsetPlan',
+    'AppLifecycle',
+    'create_lifecycle_manager',
+    'create_demo_lifecycles'
 ]
 
 

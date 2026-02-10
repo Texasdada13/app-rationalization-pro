@@ -1,0 +1,955 @@
+{% extends "base.html" %}
+
+{% block title %}Application Lifecycle - {{ portfolio.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stage-inception { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); color: white; }
+    .stage-development { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; }
+    .stage-pilot { background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%); color: white; }
+    .stage-growth { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: white; }
+    .stage-maturity { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; }
+    .stage-decline { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: white; }
+    .stage-sunset { background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); color: white; }
+    .stage-retired { background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); color: white; }
+
+    .health-excellent { background-color: #d1fae5; color: #065f46; }
+    .health-good { background-color: #dbeafe; color: #1e40af; }
+    .health-fair { background-color: #fef3c7; color: #92400e; }
+    .health-poor { background-color: #fed7aa; color: #9a3412; }
+    .health-critical { background-color: #fecaca; color: #991b1b; }
+
+    .lifecycle-card { transition: all 0.2s; }
+    .lifecycle-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+
+    .timeline-connector {
+        position: relative;
+        padding-left: 30px;
+    }
+    .timeline-connector::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e5e7eb;
+    }
+    .timeline-node {
+        position: relative;
+    }
+    .timeline-node::before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 6px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #3b82f6;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #3b82f6;
+    }
+
+    .stage-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: #e5e7eb;
+        overflow: hidden;
+    }
+    .stage-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.5s ease;
+    }
+
+    .overdue { animation: pulse 2s infinite; }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
+                <li class="breadcrumb-item active text-white">Lifecycle Management</li>
+            </ol>
+        </nav>
+        <h1><i class="bi bi-arrow-repeat me-2"></i>Application Lifecycle Management</h1>
+        <p class="lead mb-0">Track applications from inception to retirement</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-primary mb-2" id="totalApps">-</div>
+                    <p class="text-muted mb-0">Total Applications</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-warning mb-2" id="overdueCount">-</div>
+                    <p class="text-muted mb-0">Overdue Transitions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-info mb-2" id="pendingCount">-</div>
+                    <p class="text-muted mb-0">Pending Transitions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-danger mb-2" id="sunsetCount">-</div>
+                    <p class="text-muted mb-0">Active Sunset Plans</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="lifecycleTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="bi bi-grid me-1"></i>Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="applications-tab" data-bs-toggle="tab" data-bs-target="#applications" type="button" role="tab">
+                <i class="bi bi-list-ul me-1"></i>Applications
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="transitions-tab" data-bs-toggle="tab" data-bs-target="#transitions" type="button" role="tab">
+                <i class="bi bi-arrow-left-right me-1"></i>Transitions
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sunset-tab" data-bs-toggle="tab" data-bs-target="#sunset" type="button" role="tab">
+                <i class="bi bi-sunset me-1"></i>Sunset Plans
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="lifecycleTabContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row g-4">
+                <!-- Stage Distribution Chart -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Stage Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="stageChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health Distribution Chart -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-heart-pulse me-2"></i>Health Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="healthChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lifecycle Pipeline -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Lifecycle Pipeline</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap" id="pipelineView">
+                                <!-- Pipeline stages will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overdue Applications -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Overdue Transitions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="overdueList" class="list-group list-group-flush">
+                                <div class="text-center text-muted py-4">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Average Age by Stage -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Average Lifecycle Age</h5>
+                        </div>
+                        <div class="card-body d-flex align-items-center justify-content-center">
+                            <div class="text-center">
+                                <div class="display-3 fw-bold text-primary" id="avgAgeDays">-</div>
+                                <p class="text-muted mb-0">Days Average Age</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Applications Tab -->
+        <div class="tab-pane fade" id="applications" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Application Lifecycles</h5>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="stageFilter" style="width: auto;">
+                            <option value="">All Stages</option>
+                            <option value="inception">Inception</option>
+                            <option value="development">Development</option>
+                            <option value="pilot">Pilot</option>
+                            <option value="growth">Growth</option>
+                            <option value="maturity">Maturity</option>
+                            <option value="decline">Decline</option>
+                            <option value="sunset">Sunset</option>
+                            <option value="retired">Retired</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="healthFilter" style="width: auto;">
+                            <option value="">All Health</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="lifecycleTable">
+                        <thead>
+                            <tr>
+                                <th>Application</th>
+                                <th>Stage</th>
+                                <th>Health</th>
+                                <th>Days in Stage</th>
+                                <th>Progress</th>
+                                <th>Owner</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lifecycleTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4">Loading applications...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transitions Tab -->
+        <div class="tab-pane fade" id="transitions" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Pending Transition Requests</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="transitionsList">
+                                <div class="text-center text-muted py-4">Loading transitions...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Request Transition</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="transitionForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Application</label>
+                                    <select class="form-select" id="transitionAppId" required>
+                                        <option value="">Select Application</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Target Stage</label>
+                                    <select class="form-select" id="transitionToStage" required>
+                                        <option value="">Select Stage</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Requested By</label>
+                                    <input type="text" class="form-control" id="transitionRequestedBy" value="Current User">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Reason</label>
+                                    <textarea class="form-control" id="transitionReason" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-send me-1"></i>Submit Request
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sunset Plans Tab -->
+        <div class="tab-pane fade" id="sunset" role="tabpanel">
+            <div class="row g-4" id="sunsetPlansList">
+                <div class="col-12 text-center text-muted py-4">Loading sunset plans...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- App Detail Modal -->
+<div class="modal fade" id="appDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="appDetailTitle">Application Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="appDetailBody">
+                Loading...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const portfolioId = "{{ portfolio.id }}";
+let stageChart, healthChart;
+let lifecycleData = {};
+let applicationsData = [];
+let stagesData = [];
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadLifecycleData();
+    loadApplications();
+    loadStages();
+    loadTransitions();
+    loadSunsetPlans();
+
+    // Set up filters
+    document.getElementById('stageFilter').addEventListener('change', filterApplications);
+    document.getElementById('healthFilter').addEventListener('change', filterApplications);
+
+    // Set up transition form
+    document.getElementById('transitionForm').addEventListener('submit', submitTransitionRequest);
+});
+
+async function loadLifecycleData() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle`);
+        lifecycleData = await response.json();
+
+        // Update summary cards
+        document.getElementById('totalApps').textContent = lifecycleData.total_applications || 0;
+        document.getElementById('overdueCount').textContent = (lifecycleData.overdue_transitions || []).length;
+        document.getElementById('pendingCount').textContent = (lifecycleData.pending_transitions || []).length;
+        document.getElementById('sunsetCount').textContent = (lifecycleData.active_sunset_plans || []).length;
+        document.getElementById('avgAgeDays').textContent = lifecycleData.average_age_days || 0;
+
+        // Render charts
+        renderStageChart(lifecycleData.stage_distribution || {});
+        renderHealthChart(lifecycleData.health_distribution || {});
+        renderPipeline(lifecycleData.stage_distribution || {});
+        renderOverdueList(lifecycleData.overdue_transitions || []);
+
+    } catch (error) {
+        console.error('Error loading lifecycle data:', error);
+    }
+}
+
+async function loadApplications() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/apps`);
+        const data = await response.json();
+        applicationsData = data.applications || [];
+        renderApplicationsTable(applicationsData);
+        populateAppDropdown(applicationsData);
+    } catch (error) {
+        console.error('Error loading applications:', error);
+    }
+}
+
+async function loadStages() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/stages`);
+        const data = await response.json();
+        stagesData = data.stages || [];
+        populateStageDropdown(stagesData);
+    } catch (error) {
+        console.error('Error loading stages:', error);
+    }
+}
+
+async function loadTransitions() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/transitions`);
+        const data = await response.json();
+        renderTransitions(data.pending_transitions || []);
+    } catch (error) {
+        console.error('Error loading transitions:', error);
+    }
+}
+
+async function loadSunsetPlans() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/sunset-plans`);
+        const data = await response.json();
+        renderSunsetPlans(data.sunset_plans || []);
+    } catch (error) {
+        console.error('Error loading sunset plans:', error);
+    }
+}
+
+function renderStageChart(distribution) {
+    const ctx = document.getElementById('stageChart').getContext('2d');
+
+    const stageColors = {
+        inception: '#8b5cf6',
+        development: '#3b82f6',
+        pilot: '#06b6d4',
+        growth: '#10b981',
+        maturity: '#059669',
+        decline: '#f59e0b',
+        sunset: '#ef4444',
+        retired: '#6b7280'
+    };
+
+    const labels = Object.keys(distribution);
+    const values = Object.values(distribution);
+    const colors = labels.map(l => stageColors[l] || '#6b7280');
+
+    if (stageChart) stageChart.destroy();
+
+    stageChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                }
+            }
+        }
+    });
+}
+
+function renderHealthChart(distribution) {
+    const ctx = document.getElementById('healthChart').getContext('2d');
+
+    const healthColors = {
+        excellent: '#059669',
+        good: '#3b82f6',
+        fair: '#f59e0b',
+        poor: '#ea580c',
+        critical: '#dc2626'
+    };
+
+    const labels = Object.keys(distribution);
+    const values = Object.values(distribution);
+    const colors = labels.map(l => healthColors[l] || '#6b7280');
+
+    if (healthChart) healthChart.destroy();
+
+    healthChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+            datasets: [{
+                label: 'Applications',
+                data: values,
+                backgroundColor: colors,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function renderPipeline(distribution) {
+    const container = document.getElementById('pipelineView');
+    const stages = ['inception', 'development', 'pilot', 'growth', 'maturity', 'decline', 'sunset', 'retired'];
+
+    container.innerHTML = stages.map((stage, index) => {
+        const count = distribution[stage] || 0;
+        return `
+            <div class="text-center flex-fill p-3">
+                <div class="stage-${stage} rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 50px; height: 50px;">
+                    <span class="fw-bold">${count}</span>
+                </div>
+                <div class="small text-muted">${stage.charAt(0).toUpperCase() + stage.slice(1)}</div>
+                ${index < stages.length - 1 ? '<i class="bi bi-arrow-right position-absolute" style="right: -10px; top: 50%;"></i>' : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function renderOverdueList(overdueApps) {
+    const container = document.getElementById('overdueList');
+
+    if (overdueApps.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-4">No overdue transitions</div>';
+        return;
+    }
+
+    container.innerHTML = overdueApps.map(app => `
+        <div class="list-group-item d-flex justify-content-between align-items-center overdue">
+            <div>
+                <strong>${app.app_name}</strong>
+                <div class="small text-muted">
+                    Stage: ${app.current_stage} | ${app.days_overdue} days overdue
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline-warning" onclick="showAppDetail('${app.app_id}')">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function renderApplicationsTable(apps) {
+    const tbody = document.getElementById('lifecycleTableBody');
+
+    if (apps.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No applications found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = apps.map(app => {
+        const progressPct = Math.min(100, (app.days_in_stage / app.expected_duration) * 100);
+        const progressColor = progressPct > 100 ? 'bg-danger' : progressPct > 80 ? 'bg-warning' : 'bg-success';
+
+        return `
+            <tr data-stage="${app.current_stage}" data-health="${app.current_health}">
+                <td>
+                    <strong>${app.app_name}</strong>
+                    <div class="small text-muted">ID: ${app.app_id}</div>
+                </td>
+                <td>
+                    <span class="badge stage-${app.current_stage}">${app.current_stage}</span>
+                </td>
+                <td>
+                    <span class="badge health-${app.current_health}">${app.current_health}</span>
+                </td>
+                <td>
+                    ${app.days_in_stage} / ${app.expected_duration} days
+                    ${app.is_overdue ? '<i class="bi bi-exclamation-circle text-danger ms-1"></i>' : ''}
+                </td>
+                <td style="width: 150px;">
+                    <div class="stage-progress">
+                        <div class="stage-progress-fill ${progressColor}" style="width: ${Math.min(100, progressPct)}%;"></div>
+                    </div>
+                </td>
+                <td>${app.owner || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showAppDetail('${app.app_id}')">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterApplications() {
+    const stageFilter = document.getElementById('stageFilter').value;
+    const healthFilter = document.getElementById('healthFilter').value;
+
+    const filtered = applicationsData.filter(app => {
+        const stageMatch = !stageFilter || app.current_stage === stageFilter;
+        const healthMatch = !healthFilter || app.current_health === healthFilter;
+        return stageMatch && healthMatch;
+    });
+
+    renderApplicationsTable(filtered);
+}
+
+function populateAppDropdown(apps) {
+    const select = document.getElementById('transitionAppId');
+    select.innerHTML = '<option value="">Select Application</option>' +
+        apps.filter(a => a.current_stage !== 'retired').map(app =>
+            `<option value="${app.app_id}" data-stage="${app.current_stage}">${app.app_name} (${app.current_stage})</option>`
+        ).join('');
+}
+
+function populateStageDropdown(stages) {
+    const select = document.getElementById('transitionToStage');
+    select.innerHTML = '<option value="">Select Stage</option>' +
+        stages.filter(s => s.value !== 'inception').map(stage =>
+            `<option value="${stage.value}">${stage.name}</option>`
+        ).join('');
+}
+
+function renderTransitions(transitions) {
+    const container = document.getElementById('transitionsList');
+
+    if (transitions.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-4">No pending transitions</div>';
+        return;
+    }
+
+    container.innerHTML = transitions.map(t => `
+        <div class="card mb-3 lifecycle-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1">Application: ${t.app_id}</h6>
+                        <div class="mb-2">
+                            <span class="badge stage-${t.from_stage}">${t.from_stage}</span>
+                            <i class="bi bi-arrow-right mx-2"></i>
+                            <span class="badge stage-${t.to_stage}">${t.to_stage}</span>
+                        </div>
+                        <p class="text-muted small mb-1">Requested by: ${t.requested_by}</p>
+                        <p class="text-muted small mb-0">Reason: ${t.reason || 'No reason provided'}</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-success me-1" onclick="approveTransition('${t.id}')">
+                            <i class="bi bi-check"></i> Approve
+                        </button>
+                    </div>
+                </div>
+                ${t.checklist_items && t.checklist_items.length > 0 ? `
+                    <hr>
+                    <h6 class="small text-muted">Checklist</h6>
+                    <div class="small">
+                        ${t.checklist_items.map(item => `
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" ${item.completed ? 'checked' : ''}>
+                                <label class="form-check-label">${item.item}${item.required ? ' *' : ''}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderSunsetPlans(plans) {
+    const container = document.getElementById('sunsetPlansList');
+
+    if (plans.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4">No active sunset plans</div>';
+        return;
+    }
+
+    container.innerHTML = plans.map(plan => `
+        <div class="col-md-6">
+            <div class="card lifecycle-card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-sunset me-2"></i>${plan.app_name}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="small text-muted">Reason</div>
+                            <div class="fw-bold">${plan.reason.replace(/_/g, ' ')}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Target Date</div>
+                            <div class="fw-bold">${new Date(plan.target_date).toLocaleDateString()}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Replacement</div>
+                            <div class="fw-bold">${plan.replacement_app_name || 'None'}</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="small text-muted">Est. Savings</div>
+                            <div class="fw-bold text-success">$${(plan.estimated_savings || 0).toLocaleString()}</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="small text-muted mb-1">Progress</div>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-danger" style="width: ${plan.progress_percentage}%;">
+                                    ${plan.progress_percentage}%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="small text-muted">
+                                <i class="bi bi-list-check me-1"></i>${plan.migration_steps_count} migration steps |
+                                <i class="bi bi-exclamation-triangle me-1"></i>${plan.risks_count} risks identified
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <button class="btn btn-sm btn-outline-danger" onclick="viewSunsetPlan('${plan.id}')">
+                        View Details
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function showAppDetail(appId) {
+    const modal = new bootstrap.Modal(document.getElementById('appDetailModal'));
+    const titleEl = document.getElementById('appDetailTitle');
+    const bodyEl = document.getElementById('appDetailBody');
+
+    bodyEl.innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div></div>';
+    modal.show();
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/apps/${appId}`);
+        const data = await response.json();
+
+        titleEl.textContent = data.app_name;
+
+        bodyEl.innerHTML = `
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h6>Current Status</h6>
+                    <div class="mb-3">
+                        <span class="badge stage-${data.current_stage} me-2">${data.current_stage}</span>
+                        <span class="badge health-${data.current_health}">${data.current_health}</span>
+                    </div>
+                    <p class="small text-muted">
+                        <strong>Owner:</strong> ${data.owner || 'Unassigned'}<br>
+                        <strong>Criticality:</strong> ${data.business_criticality}<br>
+                        <strong>Age:</strong> ${data.lifecycle_age_days} days<br>
+                        <strong>Days in Stage:</strong> ${data.days_in_stage} / ${data.expected_duration}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Metrics</h6>
+                    <table class="table table-sm">
+                        <tr><td>Users</td><td class="text-end fw-bold">${data.metrics.users_count}</td></tr>
+                        <tr><td>Daily Transactions</td><td class="text-end fw-bold">${data.metrics.transactions_per_day}</td></tr>
+                        <tr><td>Uptime</td><td class="text-end fw-bold">${data.metrics.uptime_percentage}%</td></tr>
+                        <tr><td>Incidents</td><td class="text-end fw-bold">${data.metrics.incident_count}</td></tr>
+                        <tr><td>Satisfaction</td><td class="text-end fw-bold">${data.metrics.satisfaction_score}/5</td></tr>
+                        <tr><td>Monthly Cost</td><td class="text-end fw-bold">$${data.metrics.cost_per_month.toLocaleString()}</td></tr>
+                        <tr><td>ROI</td><td class="text-end fw-bold">${data.metrics.roi_percentage}%</td></tr>
+                    </table>
+                </div>
+                <div class="col-12">
+                    <h6>Stage Timeline</h6>
+                    <div class="timeline-connector">
+                        ${(data.timeline || []).map(t => `
+                            <div class="timeline-node mb-3">
+                                <strong>${t.to_stage}</strong>
+                                <span class="text-muted ms-2">${new Date(t.date).toLocaleDateString()}</span>
+                                ${t.duration_days ? `<span class="badge bg-secondary ms-2">${t.duration_days} days</span>` : ''}
+                                ${t.notes ? `<div class="small text-muted">${t.notes}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ${data.forecast && data.forecast.forecast && data.forecast.forecast.length > 0 ? `
+                    <div class="col-12">
+                        <h6>Forecast</h6>
+                        <p class="small text-muted">Estimated retirement: ${new Date(data.forecast.estimated_retirement).toLocaleDateString()}</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr><th>Stage</th><th>Est. Start</th><th>Duration</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${data.forecast.forecast.map(f => `
+                                        <tr>
+                                            <td>${f.stage}</td>
+                                            <td>${new Date(f.estimated_start).toLocaleDateString()}</td>
+                                            <td>${f.estimated_duration_days} days</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    } catch (error) {
+        bodyEl.innerHTML = `<div class="alert alert-danger">Error loading application details</div>`;
+    }
+}
+
+async function submitTransitionRequest(e) {
+    e.preventDefault();
+
+    const appId = document.getElementById('transitionAppId').value;
+    const toStage = document.getElementById('transitionToStage').value;
+    const requestedBy = document.getElementById('transitionRequestedBy').value;
+    const reason = document.getElementById('transitionReason').value;
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/transitions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                app_id: appId,
+                to_stage: toStage,
+                requested_by: requestedBy,
+                reason: reason
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert('Transition request submitted successfully!');
+            loadTransitions();
+            loadLifecycleData();
+            document.getElementById('transitionForm').reset();
+        } else {
+            alert('Error: ' + (result.error || 'Could not submit request'));
+        }
+    } catch (error) {
+        alert('Error submitting request: ' + error.message);
+    }
+}
+
+async function approveTransition(transitionId) {
+    if (!confirm('Approve this transition request?')) return;
+
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/transitions/${transitionId}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reviewed_by: 'Admin' })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Complete the transition
+            await fetch(`/api/portfolios/${portfolioId}/lifecycle/transitions/${transitionId}/complete`, {
+                method: 'POST'
+            });
+
+            alert('Transition approved and completed!');
+            loadTransitions();
+            loadApplications();
+            loadLifecycleData();
+        } else {
+            alert('Error: ' + (result.error || 'Could not approve'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function viewSunsetPlan(planId) {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/lifecycle/sunset-plans/${planId}`);
+        const plan = await response.json();
+
+        const modal = new bootstrap.Modal(document.getElementById('appDetailModal'));
+        document.getElementById('appDetailTitle').textContent = `Sunset Plan: ${plan.app_name}`;
+        document.getElementById('appDetailBody').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6>Details</h6>
+                    <p>
+                        <strong>Reason:</strong> ${plan.reason.replace(/_/g, ' ')}<br>
+                        <strong>Target Date:</strong> ${new Date(plan.target_date).toLocaleDateString()}<br>
+                        <strong>Replacement:</strong> ${plan.replacement_app_name || 'None'}<br>
+                        <strong>Estimated Savings:</strong> $${plan.estimated_savings.toLocaleString()}/year
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Status</h6>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar bg-danger" style="width: ${plan.progress_percentage}%;">
+                            ${plan.progress_percentage}%
+                        </div>
+                    </div>
+                    <p class="small text-muted">${plan.status}</p>
+                </div>
+                <div class="col-12">
+                    <h6>Migration Steps</h6>
+                    <ol class="list-group list-group-numbered">
+                        ${plan.migration_steps.map(step => `
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto">${step.step}</div>
+                                <span class="badge ${step.status === 'completed' ? 'bg-success' : 'bg-secondary'}">${step.status}</span>
+                            </li>
+                        `).join('')}
+                    </ol>
+                </div>
+                ${plan.risks && plan.risks.length > 0 ? `
+                    <div class="col-12">
+                        <h6>Identified Risks</h6>
+                        ${plan.risks.map(risk => `
+                            <div class="alert alert-${risk.severity === 'high' ? 'danger' : risk.severity === 'medium' ? 'warning' : 'info'} py-2">
+                                <strong>${risk.risk}</strong>
+                                <div class="small">Mitigation: ${risk.mitigation}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        modal.show();
+    } catch (error) {
+        alert('Error loading sunset plan: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

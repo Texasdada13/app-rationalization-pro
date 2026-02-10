@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+
+{% block title %}Technical Debt - {{ portfolio.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grade-a { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; }
+    .grade-b { background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%); color: white; }
+    .grade-c { background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%); color: white; }
+    .grade-d { background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%); color: white; }
+    .grade-f { background: linear-gradient(135deg, #dc2626 0%, #f87171 100%); color: white; }
+    .severity-critical { background-color: #fecaca; color: #991b1b; }
+    .severity-high { background-color: #fed7aa; color: #9a3412; }
+    .severity-medium { background-color: #fef3c7; color: #92400e; }
+    .severity-low { background-color: #d1fae5; color: #065f46; }
+    .debt-card { transition: all 0.2s; }
+    .debt-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+    .category-bar { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; }
+    .category-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .trend-up { color: #dc2626; }
+    .trend-down { color: #059669; }
+    .trend-stable { color: #6b7280; }
+    .priority-badge { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
+                <li class="breadcrumb-item active text-white">Technical Debt</li>
+            </ol>
+        </nav>
+        <h1><i class="bi bi-credit-card-2-back me-2"></i>Technical Debt Calculator</h1>
+        <p class="lead mb-0">Quantify, prioritize, and plan technical debt remediation</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="display-3 fw-bold mb-2" id="portfolioGrade">-</div>
+                    <p class="text-muted mb-0">Portfolio Grade</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-list-check display-4 text-primary"></i>
+                    <h3 class="mt-2" id="totalItems">-</h3>
+                    <p class="text-muted mb-0">Debt Items</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-clock-history display-4 text-warning"></i>
+                    <h3 class="mt-2" id="totalHours">-</h3>
+                    <p class="text-muted mb-0">Effort Hours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-currency-dollar display-4 text-danger"></i>
+                    <h3 class="mt-2" id="totalCost">-</h3>
+                    <p class="text-muted mb-0">Est. Cost</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview">
+                <i class="bi bi-graph-up me-1"></i>Overview
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#items">
+                <i class="bi bi-list-ul me-1"></i>Debt Items
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#roadmap">
+                <i class="bi bi-map me-1"></i>Paydown Roadmap
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#trends">
+                <i class="bi bi-graph-up-arrow me-1"></i>Trends
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview">
+            <div class="row">
+                <!-- Category Breakdown -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Debt by Category</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="categoryChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- App Grade Distribution -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Grade Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="gradeChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Scores -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Category Scores</h5>
+                </div>
+                <div class="card-body" id="categoryScores">
+                    <div class="text-center text-muted py-4">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommendations</h5>
+                </div>
+                <div class="card-body" id="recommendations">
+                    <div class="text-center text-muted py-4">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debt Items Tab -->
+        <div class="tab-pane fade" id="items">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Priority Debt Items</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active" onclick="filterItems('all')">All</button>
+                        <button class="btn btn-outline-danger" onclick="filterItems('critical')">Critical</button>
+                        <button class="btn btn-outline-warning" onclick="filterItems('high')">High</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Priority</th>
+                                    <th>Application</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Severity</th>
+                                    <th>Effort</th>
+                                </tr>
+                            </thead>
+                            <tbody id="debtItemsTable">
+                                <tr><td colspan="6" class="text-center py-4 text-muted">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Roadmap Tab -->
+        <div class="tab-pane fade" id="roadmap">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Debt Paydown Roadmap</h5>
+                    <div class="d-flex gap-2 align-items-center">
+                        <label class="form-label mb-0 me-2">Hours/Sprint:</label>
+                        <select class="form-select form-select-sm" style="width: auto;" id="budgetHours" onchange="loadRoadmap()">
+                            <option value="20">20</option>
+                            <option value="40" selected>40</option>
+                            <option value="80">80</option>
+                            <option value="120">120</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 id="roadmapSprints">-</h4>
+                                <small class="text-muted">Sprints Needed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 id="roadmapHours">-</h4>
+                                <small class="text-muted">Hours Planned</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 id="roadmapCompletion">-</h4>
+                                <small class="text-muted">Completion %</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 id="roadmapRemaining">-</h4>
+                                <small class="text-muted">Items Remaining</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="roadmapTimeline">
+                        <div class="text-center text-muted py-4">Loading roadmap...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trends Tab -->
+        <div class="tab-pane fade" id="trends">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Debt Trends</h5>
+                    <span class="badge" id="trendBadge">-</span>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const portfolioId = '{{ portfolio.id }}';
+let categoryChart, gradeChart, trendChart;
+let summaryData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSummary();
+    loadRoadmap();
+    loadTrends();
+});
+
+async function loadSummary() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/tech-debt`);
+        summaryData = await response.json();
+
+        // Update summary cards
+        const gradeEl = document.getElementById('portfolioGrade');
+        gradeEl.textContent = summaryData.portfolio_grade;
+        gradeEl.parentElement.classList.add(`grade-${summaryData.portfolio_grade.toLowerCase()}`);
+
+        document.getElementById('totalItems').textContent = summaryData.total_debt_items;
+        document.getElementById('totalHours').textContent = summaryData.total_effort_hours.toLocaleString();
+        document.getElementById('totalCost').textContent = '$' + summaryData.total_cost.toLocaleString();
+
+        // Render charts
+        renderCategoryChart(summaryData.category_breakdown);
+        renderGradeChart(summaryData.apps_by_grade);
+
+        // Render category scores
+        renderCategoryScores(summaryData.category_breakdown);
+
+        // Render recommendations
+        renderRecommendations(summaryData.recommendations);
+
+        // Render debt items
+        renderDebtItems(summaryData.top_priority_items);
+    } catch (error) {
+        console.error('Error loading summary:', error);
+    }
+}
+
+function renderCategoryChart(breakdown) {
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const labels = Object.keys(breakdown).map(k => k.replace('_', ' ').toUpperCase());
+    const data = Object.values(breakdown).map(v => v.count);
+    const colors = [
+        '#ef4444', '#f97316', '#eab308', '#22c55e',
+        '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'
+    ];
+
+    if (categoryChart) categoryChart.destroy();
+    categoryChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length)
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+}
+
+function renderGradeChart(grades) {
+    const ctx = document.getElementById('gradeChart').getContext('2d');
+    const labels = ['A', 'B', 'C', 'D', 'F'];
+    const data = labels.map(g => grades[g] || 0);
+    const colors = ['#059669', '#0891b2', '#d97706', '#ea580c', '#dc2626'];
+
+    if (gradeChart) gradeChart.destroy();
+    gradeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Applications',
+                data: data,
+                backgroundColor: colors
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function renderCategoryScores(breakdown) {
+    const container = document.getElementById('categoryScores');
+    const colors = {
+        security: '#ef4444', architecture: '#f97316', code_quality: '#eab308',
+        dependencies: '#22c55e', testing: '#06b6d4', performance: '#3b82f6',
+        documentation: '#8b5cf6', infrastructure: '#ec4899'
+    };
+
+    let html = '<div class="row g-3">';
+    for (const [cat, data] of Object.entries(breakdown)) {
+        const score = Math.min(100, data.count * 10);
+        const color = colors[cat] || '#6b7280';
+        html += `
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-capitalize">${cat.replace('_', ' ')}</span>
+                    <span>${data.count} items (${data.effort_hours}h)</span>
+                </div>
+                <div class="category-bar">
+                    <div class="category-fill" style="width: ${score}%; background: ${color};"></div>
+                </div>
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderRecommendations(recs) {
+    const container = document.getElementById('recommendations');
+    if (!recs || recs.length === 0) {
+        container.innerHTML = '<p class="text-muted mb-0">No recommendations at this time.</p>';
+        return;
+    }
+
+    let html = '<ul class="list-group list-group-flush">';
+    recs.forEach(rec => {
+        const icon = rec.includes('Critical') ? 'exclamation-triangle-fill text-danger' :
+                     rec.includes('Security') ? 'shield-exclamation text-warning' :
+                     rec.includes('Quick') ? 'lightning-charge text-success' : 'info-circle text-primary';
+        html += `<li class="list-group-item"><i class="bi bi-${icon} me-2"></i>${rec}</li>`;
+    });
+    html += '</ul>';
+    container.innerHTML = html;
+}
+
+function renderDebtItems(items) {
+    const tbody = document.getElementById('debtItemsTable');
+    if (!items || items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No debt items found</td></tr>';
+        return;
+    }
+
+    let html = '';
+    items.forEach((item, idx) => {
+        const severityClass = `severity-${item.severity}`;
+        html += `
+            <tr>
+                <td><span class="badge bg-dark priority-badge">#${idx + 1}</span></td>
+                <td>${item.app_name}</td>
+                <td>${item.title}</td>
+                <td><span class="badge bg-secondary">${item.category.replace('_', ' ')}</span></td>
+                <td><span class="badge ${severityClass}">${item.severity}</span></td>
+                <td>${item.effort_hours}h</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+async function loadRoadmap() {
+    try {
+        const budgetHours = document.getElementById('budgetHours').value;
+        const response = await fetch(`/api/portfolios/${portfolioId}/tech-debt/roadmap?budget_hours=${budgetHours}`);
+        const data = await response.json();
+
+        document.getElementById('roadmapSprints').textContent = data.total_sprints;
+        document.getElementById('roadmapHours').textContent = data.total_hours_planned.toLocaleString();
+        document.getElementById('roadmapCompletion').textContent = data.completion_percentage + '%';
+        document.getElementById('roadmapRemaining').textContent = data.remaining_items;
+
+        renderRoadmapTimeline(data.sprints);
+    } catch (error) {
+        console.error('Error loading roadmap:', error);
+    }
+}
+
+function renderRoadmapTimeline(sprints) {
+    const container = document.getElementById('roadmapTimeline');
+    if (!sprints || sprints.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">No sprints planned</p>';
+        return;
+    }
+
+    let html = '';
+    sprints.forEach(sprint => {
+        html += `
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <strong>Sprint ${sprint.sprint}</strong>
+                    <span>${sprint.item_count} items | ${sprint.total_hours}h | $${sprint.estimated_cost.toLocaleString()}</span>
+                </div>
+                <div class="card-body p-2">
+                    <div class="d-flex flex-wrap gap-2">
+                        ${sprint.items.map(item => `
+                            <span class="badge bg-light text-dark border" title="${item.title}">
+                                ${item.app_name}: ${item.title.substring(0, 30)}${item.title.length > 30 ? '...' : ''}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+async function loadTrends() {
+    try {
+        const response = await fetch(`/api/portfolios/${portfolioId}/tech-debt/trends?days=90`);
+        const data = await response.json();
+
+        const badge = document.getElementById('trendBadge');
+        badge.textContent = data.trend.toUpperCase();
+        badge.className = `badge ${data.trend === 'improving' ? 'bg-success' : data.trend === 'worsening' ? 'bg-danger' : 'bg-secondary'}`;
+
+        renderTrendChart(data.data_points);
+    } catch (error) {
+        console.error('Error loading trends:', error);
+    }
+}
+
+function renderTrendChart(dataPoints) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const labels = dataPoints.map(p => new Date(p.date).toLocaleDateString());
+    const counts = dataPoints.map(p => p.item_count);
+    const hours = dataPoints.map(p => p.total_hours);
+
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Debt Items',
+                    data: counts,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Effort Hours',
+                    data: hours,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Items' } },
+                y1: { beginAtZero: true, position: 'right', title: { display: true, text: 'Hours' }, grid: { drawOnChartArea: false } }
+            }
+        }
+    });
+}
+
+function filterItems(severity) {
+    if (!summaryData) return;
+    let items = summaryData.top_priority_items;
+    if (severity !== 'all') {
+        items = items.filter(i => i.severity === severity);
+    }
+    renderDebtItems(items);
+}
+</script>
+{% endblock %}

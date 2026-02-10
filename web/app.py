@@ -27,7 +27,10 @@ from rationalization import (
     RiskAssessmentFramework, BenchmarkEngine,
     # Tier 2 engines
     DependencyMapper, IntegrationAssessor, VendorRiskEngine,
-    create_demo_dependencies, create_demo_integrations, create_demo_vendors
+    create_demo_dependencies, create_demo_integrations, create_demo_vendors,
+    # Tier 2: Lifecycle Management
+    LifecycleManager, LifecycleStage, TransitionStatus, HealthStatus,
+    SunsetReason, StageMetrics, create_lifecycle_manager, create_demo_lifecycles
 )
 
 # Configure logging
@@ -1780,6 +1783,532 @@ def create_tier2_demo_data(portfolio_id):
         'integrations_created': integrations_created,
         'vendors_created': vendors_created
     })
+
+
+# =============================================================================
+# TIER 2: TECHNICAL DEBT CALCULATOR API
+# =============================================================================
+
+@app.route('/api/portfolios/<portfolio_id>/tech-debt', methods=['GET'])
+def get_tech_debt_summary(portfolio_id):
+    """Get technical debt summary for a portfolio."""
+    from rationalization import create_demo_tech_debt
+
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+
+    # Create calculator with demo data based on portfolio apps
+    calc = create_demo_tech_debt()
+
+    # Get summary
+    summary = calc.get_portfolio_summary()
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'portfolio_name': portfolio.name,
+        **summary.to_dict()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/tech-debt/apps/<app_id>', methods=['GET'])
+def get_app_tech_debt(portfolio_id, app_id):
+    """Get technical debt profile for a specific application."""
+    from rationalization import create_tech_debt_calculator
+
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    application = Application.query.get_or_404(app_id)
+
+    # Create calculator and assess app with metrics from app data
+    calc = create_tech_debt_calculator()
+
+    # Build metrics from application data
+    metrics = {
+        'code_coverage': 100 - (application.technical_debt or 50),  # Invert debt to coverage
+        'code_smells': int((application.technical_debt or 50) * 1.5),
+        'outdated_dependencies': max(0, (application.technical_debt or 50) // 10),
+        'vulnerable_dependencies': 1 if (application.technical_debt or 50) > 70 else 0,
+        'cyclomatic_complexity': 5 + ((application.technical_debt or 50) // 10),
+        'documentation_coverage': max(10, 100 - (application.technical_debt or 50)),
+        'avg_response_time_ms': 200 + (application.technical_debt or 50) * 10
+    }
+
+    profile = calc.assess_application(app_id, application.name, metrics)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'application': {
+            'id': application.id,
+            'name': application.name,
+            'time_category': application.time_category,
+            'composite_score': application.composite_score
+        },
+        **profile.to_dict()
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/tech-debt/roadmap', methods=['GET'])
+def get_tech_debt_roadmap(portfolio_id):
+    """Generate technical debt paydown roadmap."""
+    from rationalization import create_demo_tech_debt
+
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+
+    # Get parameters
+    budget_hours = request.args.get('budget_hours', 40, type=float)
+    sprint_weeks = request.args.get('sprint_weeks', 2, type=int)
+
+    calc = create_demo_tech_debt()
+    roadmap = calc.generate_paydown_roadmap(budget_hours, sprint_weeks)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'portfolio_name': portfolio.name,
+        'budget_hours_per_sprint': budget_hours,
+        'sprint_length_weeks': sprint_weeks,
+        **roadmap
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/tech-debt/trends', methods=['GET'])
+def get_tech_debt_trends(portfolio_id):
+    """Get technical debt trends over time."""
+    from rationalization import create_demo_tech_debt
+
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+
+    days = request.args.get('days', 90, type=int)
+    calc = create_demo_tech_debt()
+    trends = calc.get_debt_trends(days)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'portfolio_name': portfolio.name,
+        **trends
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/tech-debt/items', methods=['GET'])
+def get_tech_debt_items(portfolio_id):
+    """Get all technical debt items for a portfolio."""
+    from rationalization import create_demo_tech_debt
+
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+
+    # Filter parameters
+    category = request.args.get('category')
+    severity = request.args.get('severity')
+    status = request.args.get('status')
+
+    calc = create_demo_tech_debt()
+    summary = calc.get_portfolio_summary()
+
+    items = summary.top_priority_items
+
+    # Apply filters
+    if category:
+        items = [i for i in items if i['category'] == category]
+    if severity:
+        items = [i for i in items if i['severity'] == severity]
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'items': items,
+        'total_count': len(items)
+    })
+
+
+@app.route('/tech-debt/<portfolio_id>')
+def tech_debt_page(portfolio_id):
+    """Technical debt dashboard page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('tech_debt.html', portfolio=portfolio, applications=applications)
+
+
+# =============================================================================
+# TIER 2: APPLICATION LIFECYCLE MANAGEMENT API
+# =============================================================================
+
+# Store lifecycle managers per portfolio (in production, this would be in database)
+_lifecycle_managers = {}
+
+
+def get_lifecycle_manager(portfolio_id: str) -> LifecycleManager:
+    """Get or create a lifecycle manager for a portfolio."""
+    if portfolio_id not in _lifecycle_managers:
+        # Create new manager and populate with demo data
+        manager, _ = create_demo_lifecycles()
+        _lifecycle_managers[portfolio_id] = manager
+    return _lifecycle_managers[portfolio_id]
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle', methods=['GET'])
+def get_lifecycle_summary(portfolio_id):
+    """Get lifecycle management summary for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    summary = manager.get_portfolio_summary()
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'portfolio_name': portfolio.name,
+        **summary
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/apps', methods=['GET'])
+def get_all_app_lifecycles(portfolio_id):
+    """Get lifecycle info for all applications."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    lifecycles = []
+    for app_id, lifecycle in manager.lifecycles.items():
+        lifecycles.append({
+            'app_id': lifecycle.app_id,
+            'app_name': lifecycle.app_name,
+            'current_stage': lifecycle.current_stage.value,
+            'current_health': lifecycle.current_health.value,
+            'days_in_stage': lifecycle.days_in_current_stage(),
+            'expected_duration': lifecycle.expected_stage_duration_days,
+            'is_overdue': lifecycle.is_overdue_for_transition(),
+            'lifecycle_age_days': lifecycle.lifecycle_age_days(),
+            'business_criticality': lifecycle.business_criticality,
+            'owner': lifecycle.owner,
+            'has_sunset_plan': lifecycle.sunset_plan is not None,
+            'has_pending_transition': lifecycle.pending_transition is not None
+        })
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'applications': lifecycles,
+        'total_count': len(lifecycles)
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/apps/<app_id>', methods=['GET'])
+def get_app_lifecycle(portfolio_id, app_id):
+    """Get detailed lifecycle info for a specific application."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    lifecycle = manager.get_lifecycle(app_id)
+    if not lifecycle:
+        return jsonify({'error': 'Application not found in lifecycle manager'}), 404
+
+    # Get timeline
+    timeline = manager.get_stage_timeline(app_id)
+
+    # Get forecast
+    forecast = manager.forecast_lifecycle(app_id)
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'app_id': app_id,
+        'app_name': lifecycle.app_name,
+        'current_stage': lifecycle.current_stage.value,
+        'current_health': lifecycle.current_health.value,
+        'inception_date': lifecycle.inception_date.isoformat(),
+        'current_stage_start': lifecycle.current_stage_start.isoformat(),
+        'days_in_stage': lifecycle.days_in_current_stage(),
+        'expected_duration': lifecycle.expected_stage_duration_days,
+        'is_overdue': lifecycle.is_overdue_for_transition(),
+        'lifecycle_age_days': lifecycle.lifecycle_age_days(),
+        'business_criticality': lifecycle.business_criticality,
+        'owner': lifecycle.owner,
+        'metrics': {
+            'users_count': lifecycle.current_metrics.users_count,
+            'transactions_per_day': lifecycle.current_metrics.transactions_per_day,
+            'uptime_percentage': lifecycle.current_metrics.uptime_percentage,
+            'incident_count': lifecycle.current_metrics.incident_count,
+            'satisfaction_score': lifecycle.current_metrics.satisfaction_score,
+            'cost_per_month': lifecycle.current_metrics.cost_per_month,
+            'roi_percentage': lifecycle.current_metrics.roi_percentage
+        },
+        'timeline': timeline,
+        'forecast': forecast,
+        'sunset_plan': lifecycle.sunset_plan.id if lifecycle.sunset_plan else None,
+        'pending_transition': lifecycle.pending_transition.id if lifecycle.pending_transition else None
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/apps/<app_id>/timeline', methods=['GET'])
+def get_app_lifecycle_timeline(portfolio_id, app_id):
+    """Get stage transition timeline for an application."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    timeline = manager.get_stage_timeline(app_id)
+    if not timeline:
+        return jsonify({'error': 'No timeline found for application'}), 404
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'app_id': app_id,
+        'timeline': timeline,
+        'total_transitions': len(timeline)
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/apps/<app_id>/forecast', methods=['GET'])
+def get_app_lifecycle_forecast(portfolio_id, app_id):
+    """Get lifecycle forecast for an application."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    forecast = manager.forecast_lifecycle(app_id)
+    if not forecast:
+        return jsonify({'error': 'Application not found'}), 404
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        **forecast
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/transitions', methods=['GET'])
+def get_pending_transitions(portfolio_id):
+    """Get all pending transition requests."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    pending = []
+    for request_id, request in manager.transition_requests.items():
+        if request.status == TransitionStatus.PENDING:
+            pending.append({
+                'id': request.id,
+                'app_id': request.app_id,
+                'from_stage': request.from_stage.value,
+                'to_stage': request.to_stage.value,
+                'requested_date': request.requested_date.isoformat(),
+                'requested_by': request.requested_by,
+                'reason': request.reason,
+                'status': request.status.value,
+                'checklist_items': request.checklist_items
+            })
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'pending_transitions': pending,
+        'total_count': len(pending)
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/transitions', methods=['POST'])
+def request_transition(portfolio_id):
+    """Request a stage transition for an application."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+    data = request.get_json()
+
+    app_id = data.get('app_id')
+    to_stage = data.get('to_stage')
+    requested_by = data.get('requested_by', 'System')
+    reason = data.get('reason', '')
+
+    if not app_id or not to_stage:
+        return jsonify({'error': 'app_id and to_stage are required'}), 400
+
+    try:
+        stage = LifecycleStage(to_stage)
+    except ValueError:
+        return jsonify({'error': f'Invalid stage: {to_stage}'}), 400
+
+    transition = manager.request_transition(app_id, stage, requested_by, reason)
+
+    if not transition:
+        return jsonify({'error': 'Invalid transition request'}), 400
+
+    return jsonify({
+        'success': True,
+        'transition': {
+            'id': transition.id,
+            'app_id': transition.app_id,
+            'from_stage': transition.from_stage.value,
+            'to_stage': transition.to_stage.value,
+            'status': transition.status.value,
+            'checklist_items': transition.checklist_items
+        }
+    }), 201
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/transitions/<transition_id>/approve', methods=['POST'])
+def approve_transition(portfolio_id, transition_id):
+    """Approve a pending transition request."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+    data = request.get_json() or {}
+
+    reviewed_by = data.get('reviewed_by', 'Admin')
+    notes = data.get('notes', '')
+
+    success = manager.approve_transition(transition_id, reviewed_by, notes)
+
+    if not success:
+        return jsonify({'error': 'Could not approve transition'}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Transition approved'
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/transitions/<transition_id>/complete', methods=['POST'])
+def complete_transition(portfolio_id, transition_id):
+    """Complete an approved transition."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    success = manager.complete_transition(transition_id)
+
+    if not success:
+        return jsonify({'error': 'Could not complete transition - must be approved first'}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Transition completed'
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/sunset-plans', methods=['GET'])
+def get_sunset_plans(portfolio_id):
+    """Get all sunset plans for a portfolio."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    plans = []
+    for plan_id, plan in manager.sunset_plans.items():
+        plans.append({
+            'id': plan.id,
+            'app_id': plan.app_id,
+            'app_name': plan.app_name,
+            'reason': plan.reason.value,
+            'target_date': plan.target_date.isoformat(),
+            'replacement_app_id': plan.replacement_app_id,
+            'replacement_app_name': plan.replacement_app_name,
+            'status': plan.status.value,
+            'progress_percentage': plan.progress_percentage,
+            'estimated_savings': plan.estimated_savings,
+            'migration_steps_count': len(plan.migration_steps),
+            'risks_count': len(plan.risks)
+        })
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'sunset_plans': plans,
+        'total_count': len(plans)
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/sunset-plans/<plan_id>', methods=['GET'])
+def get_sunset_plan_detail(portfolio_id, plan_id):
+    """Get detailed sunset plan information."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+
+    plan = manager.sunset_plans.get(plan_id)
+    if not plan:
+        return jsonify({'error': 'Sunset plan not found'}), 404
+
+    return jsonify({
+        'portfolio_id': portfolio_id,
+        'id': plan.id,
+        'app_id': plan.app_id,
+        'app_name': plan.app_name,
+        'reason': plan.reason.value,
+        'target_date': plan.target_date.isoformat(),
+        'replacement_app_id': plan.replacement_app_id,
+        'replacement_app_name': plan.replacement_app_name,
+        'migration_steps': plan.migration_steps,
+        'stakeholders': plan.stakeholders,
+        'communication_plan': plan.communication_plan,
+        'data_retention_policy': plan.data_retention_policy,
+        'rollback_plan': plan.rollback_plan,
+        'estimated_savings': plan.estimated_savings,
+        'risks': plan.risks,
+        'status': plan.status.value,
+        'progress_percentage': plan.progress_percentage
+    })
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/sunset-plans', methods=['POST'])
+def create_sunset_plan(portfolio_id):
+    """Create a new sunset plan."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    manager = get_lifecycle_manager(portfolio_id)
+    data = request.get_json()
+
+    app_id = data.get('app_id')
+    reason = data.get('reason', 'end_of_life')
+    target_date_str = data.get('target_date')
+    replacement_app_id = data.get('replacement_app_id')
+    estimated_savings = data.get('estimated_savings', 0)
+
+    if not app_id:
+        return jsonify({'error': 'app_id is required'}), 400
+
+    try:
+        sunset_reason = SunsetReason(reason)
+    except ValueError:
+        return jsonify({'error': f'Invalid reason: {reason}'}), 400
+
+    target_date = datetime.now() + timedelta(days=180)
+    if target_date_str:
+        try:
+            target_date = datetime.fromisoformat(target_date_str)
+        except ValueError:
+            return jsonify({'error': 'Invalid target_date format'}), 400
+
+    plan = manager.create_sunset_plan(
+        app_id=app_id,
+        reason=sunset_reason,
+        target_date=target_date,
+        replacement_app_id=replacement_app_id,
+        estimated_savings=estimated_savings
+    )
+
+    if not plan:
+        return jsonify({'error': 'Could not create sunset plan'}), 400
+
+    return jsonify({
+        'success': True,
+        'plan': {
+            'id': plan.id,
+            'app_id': plan.app_id,
+            'app_name': plan.app_name,
+            'reason': plan.reason.value,
+            'target_date': plan.target_date.isoformat()
+        }
+    }), 201
+
+
+@app.route('/api/portfolios/<portfolio_id>/lifecycle/stages', methods=['GET'])
+def get_stage_definitions(portfolio_id):
+    """Get lifecycle stage definitions and metadata."""
+    return jsonify({
+        'stages': [
+            {
+                'value': stage.value,
+                'name': stage.name,
+                'order': i,
+                'expected_duration_days': LifecycleManager.STAGE_DURATIONS.get(stage, 365),
+                'checklist': LifecycleManager.TRANSITION_CHECKLISTS.get(stage, [])
+            }
+            for i, stage in enumerate(LifecycleManager.STAGE_ORDER)
+        ],
+        'health_statuses': [status.value for status in HealthStatus],
+        'sunset_reasons': [reason.value for reason in SunsetReason],
+        'transition_statuses': [status.value for status in TransitionStatus]
+    })
+
+
+@app.route('/lifecycle/<portfolio_id>')
+def lifecycle_page(portfolio_id):
+    """Application lifecycle management page."""
+    portfolio = Portfolio.query.get_or_404(portfolio_id)
+    applications = portfolio.applications.all()
+    return render_template('lifecycle.html', portfolio=portfolio, applications=applications)
 
 
 # =============================================================================
