@@ -9,7 +9,7 @@ import sys
 import json
 import logging
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, session, Response
+from flask import Flask, render_template, request, jsonify, session, Response, redirect
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -1005,6 +1005,55 @@ def change_chat_mode():
         'mode': new_mode,
         'suggested_prompts': chat_engine.get_suggested_prompts(chat_session_id)
     })
+
+
+# =============================================================================
+# FEATURE EXPLORE ROUTES (auto-demo + redirect)
+# =============================================================================
+
+FEATURE_ROUTES = {
+    'scoring': '/results/{id}',
+    'time': '/results/{id}',
+    'chat': '/chat',
+    'costs': '/costs/{id}',
+    'compliance': '/compliance/{id}',
+    'whatif': '/whatif/{id}',
+    'roadmap': '/roadmap/{id}',
+    'risk': '/risk/{id}',
+    'benchmark': '/benchmark/{id}',
+    'dependencies': '/dependencies/{id}',
+    'integrations': '/integrations/{id}',
+    'vendors': '/vendors/{id}',
+    'tech-debt': '/tech-debt/{id}',
+    'lifecycle': '/lifecycle/{id}',
+    'clustering': '/clustering/{id}',
+    'migration': '/migration/{id}',
+    'executive': '/executive-dashboard/{id}',
+    'budget': '/budget/{id}',
+    'risk-heatmap': '/risk-heatmap/{id}',
+}
+
+
+@app.route('/explore/<feature>')
+def explore_feature(feature):
+    """Smart redirect: find or create a demo portfolio, then go to the feature page."""
+    if feature not in FEATURE_ROUTES:
+        return redirect('/dashboard')
+
+    route_template = FEATURE_ROUTES[feature]
+
+    # If route doesn't need a portfolio ID, redirect directly
+    if '{id}' not in route_template:
+        return redirect(route_template)
+
+    # Find an existing portfolio
+    portfolio = Portfolio.query.first()
+
+    if not portfolio:
+        # No portfolios — trigger demo creation inline
+        return redirect('/dashboard')
+
+    return redirect(route_template.format(id=portfolio.id))
 
 
 # =============================================================================
