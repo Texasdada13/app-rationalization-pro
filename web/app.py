@@ -1013,53 +1013,125 @@ def change_chat_mode():
 
 @app.route('/api/demo/create', methods=['POST'])
 def create_demo_data():
-    """Create demo portfolio with sample applications."""
-    # Create demo portfolio
-    portfolio = Portfolio(
-        name='Enterprise IT Portfolio',
-        organization='Demo Corporation',
-        description='Sample portfolio for demonstration purposes'
-    )
-    db.session.add(portfolio)
-    db.session.flush()
-
-    # Sample applications
-    sample_apps = [
-        {'name': 'SAP ERP', 'category': 'ERP', 'department': 'Finance', 'business_value': 9, 'tech_health': 7, 'cost': 250000, 'usage': 800, 'security': 8, 'strategic_fit': 9, 'redundancy': 0},
-        {'name': 'Legacy CRM', 'category': 'CRM', 'department': 'Sales', 'business_value': 6, 'tech_health': 3, 'cost': 80000, 'usage': 200, 'security': 4, 'strategic_fit': 4, 'redundancy': 1},
-        {'name': 'Salesforce', 'category': 'CRM', 'department': 'Sales', 'business_value': 8, 'tech_health': 9, 'cost': 120000, 'usage': 450, 'security': 9, 'strategic_fit': 8, 'redundancy': 0},
-        {'name': 'Custom Reporting Tool', 'category': 'BI', 'department': 'IT', 'business_value': 4, 'tech_health': 2, 'cost': 40000, 'usage': 50, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
-        {'name': 'Power BI', 'category': 'BI', 'department': 'IT', 'business_value': 8, 'tech_health': 9, 'cost': 60000, 'usage': 300, 'security': 8, 'strategic_fit': 9, 'redundancy': 0},
-        {'name': 'HR System', 'category': 'HR', 'department': 'HR', 'business_value': 7, 'tech_health': 5, 'cost': 90000, 'usage': 400, 'security': 6, 'strategic_fit': 6, 'redundancy': 0},
-        {'name': 'Expense Tracker', 'category': 'Finance', 'department': 'Finance', 'business_value': 5, 'tech_health': 4, 'cost': 25000, 'usage': 150, 'security': 5, 'strategic_fit': 5, 'redundancy': 0},
-        {'name': 'Document Management', 'category': 'Productivity', 'department': 'Operations', 'business_value': 6, 'tech_health': 6, 'cost': 35000, 'usage': 500, 'security': 7, 'strategic_fit': 7, 'redundancy': 0},
-        {'name': 'Legacy Inventory', 'category': 'Operations', 'department': 'Operations', 'business_value': 3, 'tech_health': 2, 'cost': 55000, 'usage': 20, 'security': 2, 'strategic_fit': 1, 'redundancy': 0},
-        {'name': 'ServiceNow', 'category': 'ITSM', 'department': 'IT', 'business_value': 8, 'tech_health': 8, 'cost': 150000, 'usage': 600, 'security': 8, 'strategic_fit': 8, 'redundancy': 0},
+    """Create diverse demo portfolios with sample applications."""
+    demo_portfolios = [
+        {
+            'name': 'Enterprise IT Portfolio',
+            'organization': 'Meridian Health System',
+            'description': 'Healthcare system IT modernization initiative',
+            'apps': [
+                {'name': 'Epic EHR', 'category': 'EHR', 'department': 'Clinical', 'business_value': 10, 'tech_health': 8, 'cost': 500000, 'usage': 2000, 'security': 9, 'strategic_fit': 10, 'redundancy': 0},
+                {'name': 'Legacy Lab System', 'category': 'Clinical', 'department': 'Lab', 'business_value': 6, 'tech_health': 2, 'cost': 120000, 'usage': 300, 'security': 3, 'strategic_fit': 3, 'redundancy': 1},
+                {'name': 'Workday HCM', 'category': 'HR', 'department': 'HR', 'business_value': 8, 'tech_health': 9, 'cost': 180000, 'usage': 800, 'security': 8, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'Custom Billing Portal', 'category': 'Finance', 'department': 'Revenue Cycle', 'business_value': 5, 'tech_health': 3, 'cost': 90000, 'usage': 150, 'security': 4, 'strategic_fit': 4, 'redundancy': 1},
+                {'name': 'Tableau Analytics', 'category': 'BI', 'department': 'Analytics', 'business_value': 7, 'tech_health': 8, 'cost': 75000, 'usage': 400, 'security': 7, 'strategic_fit': 7, 'redundancy': 0},
+                {'name': 'Patient Portal', 'category': 'Patient Engagement', 'department': 'Digital', 'business_value': 8, 'tech_health': 6, 'cost': 65000, 'usage': 5000, 'security': 7, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Legacy Scheduling', 'category': 'Operations', 'department': 'Clinical', 'business_value': 4, 'tech_health': 2, 'cost': 45000, 'usage': 100, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
+                {'name': 'ServiceNow ITSM', 'category': 'ITSM', 'department': 'IT', 'business_value': 8, 'tech_health': 9, 'cost': 160000, 'usage': 600, 'security': 8, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'Cerner Radiology', 'category': 'Imaging', 'department': 'Radiology', 'business_value': 7, 'tech_health': 5, 'cost': 200000, 'usage': 250, 'security': 6, 'strategic_fit': 6, 'redundancy': 0},
+                {'name': 'SharePoint Intranet', 'category': 'Collaboration', 'department': 'IT', 'business_value': 5, 'tech_health': 7, 'cost': 30000, 'usage': 1500, 'security': 7, 'strategic_fit': 5, 'redundancy': 0},
+                {'name': 'Deprecated HR Tool', 'category': 'HR', 'department': 'HR', 'business_value': 2, 'tech_health': 1, 'cost': 35000, 'usage': 10, 'security': 2, 'strategic_fit': 1, 'redundancy': 1},
+                {'name': 'Azure AD', 'category': 'Identity', 'department': 'IT', 'business_value': 9, 'tech_health': 9, 'cost': 40000, 'usage': 3000, 'security': 9, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Supply Chain Manager', 'category': 'Supply Chain', 'department': 'Operations', 'business_value': 6, 'tech_health': 5, 'cost': 85000, 'usage': 200, 'security': 5, 'strategic_fit': 6, 'redundancy': 0},
+                {'name': 'Pharmacy Mgmt System', 'category': 'Clinical', 'department': 'Pharmacy', 'business_value': 8, 'tech_health': 6, 'cost': 110000, 'usage': 350, 'security': 7, 'strategic_fit': 7, 'redundancy': 0},
+                {'name': 'Custom Report Builder', 'category': 'BI', 'department': 'IT', 'business_value': 3, 'tech_health': 2, 'cost': 25000, 'usage': 30, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
+            ]
+        },
+        {
+            'name': 'Manufacturing Operations Suite',
+            'organization': 'NovaTech Manufacturing',
+            'description': 'Industry 4.0 digital transformation program',
+            'apps': [
+                {'name': 'SAP S/4HANA', 'category': 'ERP', 'department': 'Operations', 'business_value': 10, 'tech_health': 8, 'cost': 400000, 'usage': 1200, 'security': 8, 'strategic_fit': 10, 'redundancy': 0},
+                {'name': 'MES Platform', 'category': 'Manufacturing', 'department': 'Production', 'business_value': 9, 'tech_health': 7, 'cost': 250000, 'usage': 500, 'security': 7, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Legacy Inventory DB', 'category': 'Inventory', 'department': 'Warehouse', 'business_value': 4, 'tech_health': 2, 'cost': 60000, 'usage': 80, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
+                {'name': 'Quality Mgmt System', 'category': 'Quality', 'department': 'QA', 'business_value': 8, 'tech_health': 6, 'cost': 95000, 'usage': 300, 'security': 7, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'CAD Design Suite', 'category': 'Engineering', 'department': 'R&D', 'business_value': 9, 'tech_health': 8, 'cost': 180000, 'usage': 150, 'security': 6, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Old CRM System', 'category': 'CRM', 'department': 'Sales', 'business_value': 3, 'tech_health': 2, 'cost': 55000, 'usage': 40, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
+                {'name': 'Salesforce', 'category': 'CRM', 'department': 'Sales', 'business_value': 8, 'tech_health': 9, 'cost': 120000, 'usage': 350, 'security': 8, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'Power BI', 'category': 'BI', 'department': 'Finance', 'business_value': 7, 'tech_health': 9, 'cost': 45000, 'usage': 250, 'security': 8, 'strategic_fit': 7, 'redundancy': 0},
+                {'name': 'IoT Sensor Platform', 'category': 'IoT', 'department': 'Engineering', 'business_value': 8, 'tech_health': 7, 'cost': 130000, 'usage': 200, 'security': 6, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Predictive Maintenance', 'category': 'AI/ML', 'department': 'Maintenance', 'business_value': 7, 'tech_health': 8, 'cost': 85000, 'usage': 100, 'security': 7, 'strategic_fit': 8, 'redundancy': 0},
+            ]
+        },
+        {
+            'name': 'Municipal Government Systems',
+            'organization': 'City of Waterloo',
+            'description': 'Smart city and citizen services modernization',
+            'apps': [
+                {'name': 'Tyler Munis ERP', 'category': 'ERP', 'department': 'Finance', 'business_value': 8, 'tech_health': 6, 'cost': 200000, 'usage': 400, 'security': 7, 'strategic_fit': 7, 'redundancy': 0},
+                {'name': 'Citizen Portal', 'category': 'CRM', 'department': 'Citizen Services', 'business_value': 9, 'tech_health': 7, 'cost': 85000, 'usage': 8000, 'security': 7, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Legacy Permitting', 'category': 'Permitting', 'department': 'Planning', 'business_value': 5, 'tech_health': 2, 'cost': 70000, 'usage': 150, 'security': 3, 'strategic_fit': 3, 'redundancy': 1},
+                {'name': 'GIS Platform', 'category': 'GIS', 'department': 'Public Works', 'business_value': 8, 'tech_health': 8, 'cost': 110000, 'usage': 300, 'security': 7, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'CAD 911 System', 'category': 'Public Safety', 'department': 'Police', 'business_value': 10, 'tech_health': 5, 'cost': 300000, 'usage': 200, 'security': 8, 'strategic_fit': 10, 'redundancy': 0},
+                {'name': 'Utility Billing', 'category': 'Finance', 'department': 'Utilities', 'business_value': 7, 'tech_health': 4, 'cost': 65000, 'usage': 100, 'security': 5, 'strategic_fit': 6, 'redundancy': 0},
+                {'name': 'Old Website CMS', 'category': 'Web', 'department': 'IT', 'business_value': 3, 'tech_health': 2, 'cost': 20000, 'usage': 50, 'security': 2, 'strategic_fit': 2, 'redundancy': 1},
+                {'name': 'Fleet Management', 'category': 'Operations', 'department': 'Public Works', 'business_value': 6, 'tech_health': 5, 'cost': 40000, 'usage': 80, 'security': 5, 'strategic_fit': 5, 'redundancy': 0},
+            ]
+        },
+        {
+            'name': 'Financial Services Platform',
+            'organization': 'Pinnacle Financial Group',
+            'description': 'Fintech modernization and compliance overhaul',
+            'apps': [
+                {'name': 'Core Banking Platform', 'category': 'Banking', 'department': 'Operations', 'business_value': 10, 'tech_health': 5, 'cost': 800000, 'usage': 5000, 'security': 8, 'strategic_fit': 10, 'redundancy': 0},
+                {'name': 'Fraud Detection ML', 'category': 'AI/ML', 'department': 'Risk', 'business_value': 9, 'tech_health': 9, 'cost': 200000, 'usage': 100, 'security': 9, 'strategic_fit': 9, 'redundancy': 0},
+                {'name': 'Legacy Loan Processing', 'category': 'Lending', 'department': 'Loans', 'business_value': 6, 'tech_health': 2, 'cost': 150000, 'usage': 200, 'security': 4, 'strategic_fit': 3, 'redundancy': 1},
+                {'name': 'Mobile Banking App', 'category': 'Digital', 'department': 'Digital', 'business_value': 9, 'tech_health': 8, 'cost': 250000, 'usage': 50000, 'security': 9, 'strategic_fit': 10, 'redundancy': 0},
+                {'name': 'Compliance Tracker', 'category': 'Compliance', 'department': 'Legal', 'business_value': 8, 'tech_health': 6, 'cost': 90000, 'usage': 80, 'security': 8, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'Old Reporting Engine', 'category': 'BI', 'department': 'Finance', 'business_value': 3, 'tech_health': 2, 'cost': 45000, 'usage': 25, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
+            ]
+        },
+        {
+            'name': 'Higher Education IT Portfolio',
+            'organization': 'Lakeview State University',
+            'description': 'Campus digital transformation and student experience',
+            'apps': [
+                {'name': 'Banner ERP', 'category': 'ERP', 'department': 'Administration', 'business_value': 9, 'tech_health': 5, 'cost': 350000, 'usage': 2000, 'security': 7, 'strategic_fit': 8, 'redundancy': 0},
+                {'name': 'Canvas LMS', 'category': 'LMS', 'department': 'Academic', 'business_value': 10, 'tech_health': 9, 'cost': 120000, 'usage': 15000, 'security': 8, 'strategic_fit': 10, 'redundancy': 0},
+                {'name': 'Legacy Student Portal', 'category': 'Student Services', 'department': 'Student Affairs', 'business_value': 4, 'tech_health': 2, 'cost': 55000, 'usage': 100, 'security': 3, 'strategic_fit': 2, 'redundancy': 1},
+                {'name': 'Research Grant Mgmt', 'category': 'Research', 'department': 'Research', 'business_value': 7, 'tech_health': 6, 'cost': 80000, 'usage': 200, 'security': 6, 'strategic_fit': 7, 'redundancy': 0},
+                {'name': 'Library System', 'category': 'Library', 'department': 'Library', 'business_value': 6, 'tech_health': 4, 'cost': 40000, 'usage': 3000, 'security': 5, 'strategic_fit': 5, 'redundancy': 0},
+            ]
+        },
     ]
 
-    # Process and add applications
-    for app_data in sample_apps:
-        application = Application(
-            portfolio_id=portfolio.id,
-            **app_data
+    first_portfolio = None
+    total_apps = 0
+
+    for portfolio_data in demo_portfolios:
+        portfolio = Portfolio(
+            name=portfolio_data['name'],
+            organization=portfolio_data['organization'],
+            description=portfolio_data['description']
         )
+        db.session.add(portfolio)
+        db.session.flush()
 
-        # Process through rationalization engine
-        results = rationalization_engine.process_single_application(application.to_scoring_dict())
-        application.apply_scoring_results(results)
+        if first_portfolio is None:
+            first_portfolio = portfolio
 
-        db.session.add(application)
+        for app_data in portfolio_data['apps']:
+            application = Application(
+                portfolio_id=portfolio.id,
+                **app_data
+            )
+            results = rationalization_engine.process_single_application(application.to_scoring_dict())
+            application.apply_scoring_results(results)
+            db.session.add(application)
+            total_apps += 1
 
-    db.session.commit()
+        db.session.commit()
+        portfolio.update_metrics()
 
-    # Update portfolio metrics
-    portfolio.update_metrics()
     db.session.commit()
 
     return jsonify({
         'success': True,
-        'portfolio': portfolio.to_dict(),
-        'applications_created': len(sample_apps)
+        'portfolio': first_portfolio.to_dict(),
+        'portfolios_created': len(demo_portfolios),
+        'applications_created': total_apps,
+        'redirect': '/dashboard'
     })
 
 

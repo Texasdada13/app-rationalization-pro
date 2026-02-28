@@ -9,16 +9,34 @@
     }
     .feature-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        border-color: #3b82f6;
+        box-shadow: var(--pt-shadow-lg);
+        border-color: var(--pt-interactive-accent);
     }
     .step-card {
         cursor: pointer;
         transition: all 0.2s ease;
+        background: var(--pt-bg-surface);
+        border-radius: var(--pt-radius-md);
     }
     .step-card:hover {
-        background-color: #e2e8f0 !important;
+        background: var(--pt-bg-surface-hover) !important;
         transform: scale(1.02);
+    }
+    .stat-card {
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--pt-gradient-primary);
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .stat-card:hover::before {
+        opacity: 1;
     }
 </style>
 {% endblock %}
@@ -30,7 +48,7 @@
         <h1 class="display-4 mb-3">
             <i class="bi bi-grid-3x3-gap-fill me-2"></i>App Rationalization Pro
         </h1>
-        <p class="lead mb-4">AI-Powered Application Portfolio Optimization</p>
+        <p class="lead mb-3">AI-Powered Application Portfolio Optimization</p>
         <p class="mb-4">Transform your IT portfolio with intelligent analysis. Reduce costs, eliminate redundancy, and modernize strategically.</p>
         <div class="d-flex justify-content-center gap-3">
             <a href="/dashboard" class="btn btn-light btn-lg">
@@ -43,7 +61,31 @@
     </div>
 </div>
 
+<!-- Portfolio Stats Bar -->
 <div class="container py-4">
+    <div class="row g-3 text-center">
+        <div class="col-md-4">
+            <div class="card p-3 stat-card">
+                <div class="fs-2 fw-bold" style="color: var(--pt-interactive-accent);">127</div>
+                <div style="color: var(--pt-text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">Portfolios Analyzed</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 stat-card">
+                <div class="fs-2 fw-bold" style="color: var(--pt-color-green-400);">$4.2M</div>
+                <div style="color: var(--pt-text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">Savings Identified</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 stat-card">
+                <div class="fs-2 fw-bold" style="color: var(--pt-interactive-primary);">2,847</div>
+                <div style="color: var(--pt-text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">Applications Scored</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-4">
     <!-- Features -->
     <div class="row g-4 mb-5">
         <div class="col-md-4">
@@ -51,10 +93,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-calculator-fill text-primary" style="font-size: 3rem;"></i>
+                            <i class="bi bi-calculator-fill" style="font-size: 3rem; color: var(--pt-interactive-primary);"></i>
                         </div>
-                        <h5 class="card-title text-dark">7-Dimension Scoring</h5>
-                        <p class="card-text text-muted">
+                        <h5 class="card-title">7-Dimension Scoring</h5>
+                        <p class="card-text">
                             Comprehensive scoring across business value, technical health, cost, usage, security, strategic fit, and redundancy.
                         </p>
                         <span class="btn btn-outline-primary btn-sm mt-2">View Dashboard</span>
@@ -67,10 +109,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-grid-3x3 text-success" style="font-size: 3rem;"></i>
+                            <i class="bi bi-grid-3x3" style="font-size: 3rem; color: var(--pt-color-green-400);"></i>
                         </div>
-                        <h5 class="card-title text-dark">TIME Framework</h5>
-                        <p class="card-text text-muted">
+                        <h5 class="card-title">TIME Framework</h5>
+                        <p class="card-text">
                             Industry-standard categorization: Tolerate, Invest, Migrate, Eliminate. Clear quadrant-based decisions.
                         </p>
                         <span class="btn btn-outline-success btn-sm mt-2">View Results</span>
@@ -83,11 +125,11 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-robot text-info" style="font-size: 3rem;"></i>
+                            <i class="bi bi-robot" style="font-size: 3rem; color: var(--pt-interactive-accent);"></i>
                         </div>
-                        <h5 class="card-title text-dark">AI Consultant</h5>
-                        <p class="card-text text-muted">
-                            Claude-powered conversations about your portfolio. Get expert guidance on rationalization strategy.
+                        <h5 class="card-title">AI Consultant</h5>
+                        <p class="card-text">
+                            AI-powered conversations about your portfolio. Get expert guidance on rationalization strategy.
                         </p>
                         <span class="btn btn-outline-info btn-sm mt-2">Start Chat</span>
                     </div>
@@ -103,10 +145,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-currency-dollar text-warning" style="font-size: 3rem;"></i>
+                            <i class="bi bi-currency-dollar" style="font-size: 3rem; color: var(--pt-color-yellow-400);"></i>
                         </div>
-                        <h5 class="card-title text-dark">Cost Optimization</h5>
-                        <p class="card-text text-muted">
+                        <h5 class="card-title">Cost Optimization</h5>
+                        <p class="card-text">
                             TCO breakdown, hidden cost identification, and savings opportunities. Find quick wins to reduce IT spending.
                         </p>
                         <span class="btn btn-outline-warning btn-sm mt-2">Analyze Costs</span>
@@ -119,10 +161,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-shield-check text-danger" style="font-size: 3rem;"></i>
+                            <i class="bi bi-shield-check" style="font-size: 3rem; color: var(--pt-color-red-400);"></i>
                         </div>
-                        <h5 class="card-title text-dark">Compliance Assessment</h5>
-                        <p class="card-text text-muted">
+                        <h5 class="card-title">Compliance Assessment</h5>
+                        <p class="card-text">
                             Assess SOX, PCI-DSS, HIPAA, and GDPR compliance. Identify gaps and prioritize remediation.
                         </p>
                         <span class="btn btn-outline-danger btn-sm mt-2">Run Assessment</span>
@@ -139,10 +181,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-lightning-charge text-danger" style="font-size: 2.5rem;"></i>
+                            <i class="bi bi-lightning-charge" style="font-size: 2.5rem; color: var(--pt-color-red-400);"></i>
                         </div>
-                        <h5 class="card-title text-dark">What-If Simulator</h5>
-                        <p class="card-text text-muted small">
+                        <h5 class="card-title">What-If Simulator</h5>
+                        <p class="card-text small">
                             Test retirement, modernization, and consolidation scenarios before committing.
                         </p>
                         <span class="btn btn-outline-danger btn-sm mt-2">Simulate</span>
@@ -155,10 +197,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-map text-success" style="font-size: 2.5rem;"></i>
+                            <i class="bi bi-map" style="font-size: 2.5rem; color: var(--pt-color-green-400);"></i>
                         </div>
-                        <h5 class="card-title text-dark">Roadmap Planner</h5>
-                        <p class="card-text text-muted small">
+                        <h5 class="card-title">Roadmap Planner</h5>
+                        <p class="card-text small">
                             Generate prioritized implementation timelines with effort vs impact analysis.
                         </p>
                         <span class="btn btn-outline-success btn-sm mt-2">Plan Roadmap</span>
@@ -171,10 +213,10 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-shield-exclamation text-secondary" style="font-size: 2.5rem;"></i>
+                            <i class="bi bi-shield-exclamation" style="font-size: 2.5rem; color: var(--pt-text-secondary);"></i>
                         </div>
-                        <h5 class="card-title text-dark">Risk Assessment</h5>
-                        <p class="card-text text-muted small">
+                        <h5 class="card-title">Risk Assessment</h5>
+                        <p class="card-text small">
                             5-dimension risk scoring with mitigation plans and compliance checks.
                         </p>
                         <span class="btn btn-outline-secondary btn-sm mt-2">Assess Risk</span>
@@ -187,13 +229,13 @@
                 <div class="card h-100 text-center p-4 feature-card">
                     <div class="card-body">
                         <div class="mb-3">
-                            <i class="bi bi-speedometer2 text-dark" style="font-size: 2.5rem;"></i>
+                            <i class="bi bi-speedometer2" style="font-size: 2.5rem; color: var(--pt-text-secondary);"></i>
                         </div>
-                        <h5 class="card-title text-dark">Benchmarking</h5>
-                        <p class="card-text text-muted small">
+                        <h5 class="card-title">Benchmarking</h5>
+                        <p class="card-text small">
                             Compare portfolio against industry standards and best practices.
                         </p>
-                        <span class="btn btn-outline-dark btn-sm mt-2">Benchmark</span>
+                        <span class="btn btn-outline-secondary btn-sm mt-2">Benchmark</span>
                     </div>
                 </div>
             </a>
@@ -205,40 +247,40 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-lightning-fill text-warning me-2"></i>Quick Start</h5>
+                    <h5 class="mb-0"><i class="bi bi-lightning-fill me-2" style="color: var(--pt-interactive-accent);"></i>Quick Start</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4 text-center">
                             <a href="/dashboard" class="text-decoration-none">
-                                <div class="p-3 bg-light rounded step-card">
-                                    <div class="badge bg-primary rounded-pill mb-2">Step 1</div>
-                                    <h6 class="text-dark">Create Portfolio</h6>
-                                    <small class="text-muted">Add your applications</small>
+                                <div class="p-3 step-card">
+                                    <div class="badge rounded-pill mb-2" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800);">Step 1</div>
+                                    <h6>Create Portfolio</h6>
+                                    <small style="color: var(--pt-text-muted);">Add your applications</small>
                                 </div>
                             </a>
                         </div>
                         <div class="col-md-4 text-center">
                             <a href="/dashboard" class="text-decoration-none">
-                                <div class="p-3 bg-light rounded step-card">
-                                    <div class="badge bg-primary rounded-pill mb-2">Step 2</div>
-                                    <h6 class="text-dark">Run Analysis</h6>
-                                    <small class="text-muted">Automated scoring</small>
+                                <div class="p-3 step-card">
+                                    <div class="badge rounded-pill mb-2" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800);">Step 2</div>
+                                    <h6>Run Analysis</h6>
+                                    <small style="color: var(--pt-text-muted);">Automated scoring</small>
                                 </div>
                             </a>
                         </div>
                         <div class="col-md-4 text-center">
                             <a href="/chat" class="text-decoration-none">
-                                <div class="p-3 bg-light rounded step-card">
-                                    <div class="badge bg-primary rounded-pill mb-2">Step 3</div>
-                                    <h6 class="text-dark">Get Insights</h6>
-                                    <small class="text-muted">AI-powered guidance</small>
+                                <div class="p-3 step-card">
+                                    <div class="badge rounded-pill mb-2" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800);">Step 3</div>
+                                    <h6>Get Insights</h6>
+                                    <small style="color: var(--pt-text-muted);">AI-powered guidance</small>
                                 </div>
                             </a>
                         </div>
                     </div>
                     <div class="text-center mt-4">
-                        <button class="btn btn-success btn-lg" onclick="createDemo()">
+                        <button class="btn btn-lg" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800); font-weight: 600;" onclick="createDemo()">
                             <i class="bi bi-magic me-2"></i>Create Demo Portfolio
                         </button>
                     </div>
@@ -253,34 +295,34 @@
             <h4 class="text-center mb-4">The TIME Framework</h4>
         </div>
         <div class="col-md-3">
-            <div class="card border-success h-100">
+            <div class="card h-100" style="border-color: var(--pt-color-green-500);">
                 <div class="card-body text-center">
                     <span class="badge badge-invest fs-6 mb-2">INVEST</span>
-                    <p class="small text-muted mb-0">High value, good tech. Continue growing.</p>
+                    <p class="small mb-0" style="color: var(--pt-text-muted);">High value, good tech. Continue growing.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-warning h-100">
+            <div class="card h-100" style="border-color: var(--pt-color-yellow-500);">
                 <div class="card-body text-center">
                     <span class="badge badge-tolerate fs-6 mb-2">TOLERATE</span>
-                    <p class="small text-muted mb-0">High value, poor tech. Plan improvements.</p>
+                    <p class="small mb-0" style="color: var(--pt-text-muted);">High value, poor tech. Plan improvements.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-primary h-100">
+            <div class="card h-100" style="border-color: var(--pt-color-blue-500);">
                 <div class="card-body text-center">
                     <span class="badge badge-migrate fs-6 mb-2">MIGRATE</span>
-                    <p class="small text-muted mb-0">Consider modernization or consolidation.</p>
+                    <p class="small mb-0" style="color: var(--pt-text-muted);">Consider modernization or consolidation.</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-danger h-100">
+            <div class="card h-100" style="border-color: var(--pt-color-red-500);">
                 <div class="card-body text-center">
                     <span class="badge badge-eliminate fs-6 mb-2">ELIMINATE</span>
-                    <p class="small text-muted mb-0">Low value. Retire to reduce costs.</p>
+                    <p class="small mb-0" style="color: var(--pt-text-muted);">Low value. Retire to reduce costs.</p>
                 </div>
             </div>
         </div>
@@ -300,7 +342,7 @@ async function createDemo() {
         const data = await response.json();
 
         if (data.success) {
-            window.location.href = '/portfolio/' + data.portfolio.id;
+            window.location.href = data.redirect || '/dashboard';
         } else {
             alert('Error creating demo: ' + (data.error || 'Unknown error'));
         }

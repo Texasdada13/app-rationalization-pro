@@ -44,7 +44,7 @@
                     <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Suggested Prompts</h6>
                 </div>
                 <div class="card-body p-2" id="suggestedPrompts">
-                    <small class="text-muted">Start a conversation to see suggestions</small>
+                    <small style="color: var(--pt-text-muted);">Start a conversation to see suggestions</small>
                 </div>
             </div>
         </div>
@@ -57,10 +57,10 @@
                         <h5 class="mb-0">
                             <i class="bi bi-robot me-2"></i>AI Portfolio Consultant
                         </h5>
-                        <small class="text-muted">Powered by Claude</small>
+                        <small style="color: var(--pt-text-muted);">Powered by PTS AI</small>
                     </div>
                     {% if portfolio %}
-                    <span class="badge bg-primary">
+                    <span class="badge" style="background: var(--pt-interactive-primary);">
                         <i class="bi bi-folder me-1"></i>{{ portfolio.name }}
                     </span>
                     {% endif %}
@@ -68,15 +68,43 @@
 
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages">
-                        <div class="text-center py-5" id="welcomeMessage">
-                            <i class="bi bi-robot text-primary" style="font-size: 4rem;"></i>
-                            <h4 class="mt-3">Welcome to AI Portfolio Consultant</h4>
-                            <p class="text-muted">
-                                I can help you analyze your application portfolio, explain TIME categorizations,
-                                review recommendations, and plan your rationalization roadmap.
+                        <div class="text-center py-4" id="welcomeMessage">
+                            <i class="bi bi-robot" style="font-size: 4rem; color: var(--pt-interactive-accent);"></i>
+                            <h4 class="mt-3">AI Portfolio Consultant</h4>
+                            <p style="color: var(--pt-text-secondary);">
+                                Start a conversation about your application portfolio. Select a prompt below or type your own question.
                             </p>
-                            <button class="btn btn-primary" onclick="startChat()">
-                                <i class="bi bi-play-fill me-2"></i>Start Conversation
+
+                            <!-- Pre-loaded suggested prompts -->
+                            <div class="row g-2 mt-3 px-4 justify-content-center">
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-secondary w-100 text-start p-3" onclick="quickStart('What does a typical app rationalization initiative look like? Walk me through the process.')">
+                                        <i class="bi bi-lightbulb me-2" style="color: var(--pt-interactive-accent);"></i>
+                                        <span>Walk me through the rationalization process</span>
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-secondary w-100 text-start p-3" onclick="quickStart('How do you score applications using the 7-dimension model? Explain each dimension.')">
+                                        <i class="bi bi-calculator me-2" style="color: var(--pt-interactive-accent);"></i>
+                                        <span>Explain the 7-dimension scoring model</span>
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-secondary w-100 text-start p-3" onclick="quickStart('What is the TIME framework and how should I use it to categorize my applications?')">
+                                        <i class="bi bi-grid-3x3 me-2" style="color: var(--pt-interactive-accent);"></i>
+                                        <span>What is the TIME framework?</span>
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-secondary w-100 text-start p-3" onclick="quickStart('Help me build a business case for application rationalization. What ROI can I expect?')">
+                                        <i class="bi bi-graph-up me-2" style="color: var(--pt-interactive-accent);"></i>
+                                        <span>Build a business case for rationalization</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-lg mt-4" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800); font-weight: 600;" onclick="startChat()">
+                                <i class="bi bi-play-fill me-2"></i>Start Free-Form Conversation
                             </button>
                         </div>
                     </div>
@@ -104,6 +132,12 @@
 <script>
 let sessionId = null;
 let isStreaming = false;
+
+async function quickStart(prompt) {
+    await startChat();
+    document.getElementById('messageInput').value = prompt;
+    sendMessage(new Event('submit'));
+}
 
 async function startChat() {
     const portfolioId = '{{ portfolio.id if portfolio else "" }}';
@@ -190,7 +224,7 @@ async function sendMessage(event) {
                         } else if (data.type === 'done') {
                             updateSuggestedPrompts(data.suggested_prompts);
                         } else if (data.type === 'error') {
-                            messageDiv.innerHTML = '<span class="text-danger">' + data.content + '</span>';
+                            messageDiv.innerHTML = '<span style="color: var(--pt-color-red-400);">' + data.content + '</span>';
                         }
                     } catch (e) {}
                 }
@@ -231,7 +265,7 @@ function scrollToBottom() {
 function updateSuggestedPrompts(prompts) {
     const container = document.getElementById('suggestedPrompts');
     if (!prompts || prompts.length === 0) {
-        container.innerHTML = '<small class="text-muted">No suggestions available</small>';
+        container.innerHTML = '<small style="color: var(--pt-text-muted);">No suggestions available</small>';
         return;
     }
 

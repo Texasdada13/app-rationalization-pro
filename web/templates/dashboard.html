@@ -148,7 +148,7 @@ async function createDemo() {
         const response = await fetch('/api/demo/create', { method: 'POST' });
         const data = await response.json();
         if (data.success) {
-            window.location.href = '/portfolio/' + data.portfolio.id;
+            window.location.href = data.redirect || '/dashboard';
         }
     } catch (error) {
         alert('Error: ' + error.message);
