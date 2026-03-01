@@ -1,58 +1,30 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}{{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block subnav %}
+{{ portfolio_subnav(portfolio.id, 'portfolio') }}
+{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <h2>{{ portfolio.name }}</h2>
+            <h2><i class="bi bi-folder2-open me-2"></i>{{ portfolio.name }}</h2>
             <p class="text-muted mb-0">{{ portfolio.organization or 'No organization' }}</p>
         </div>
         <div class="d-flex gap-2">
+            <a href="/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Dashboard
+            </a>
             <button class="btn btn-success" onclick="analyzePortfolio()">
                 <i class="bi bi-lightning-fill me-2"></i>Run Analysis
             </button>
             <a href="/chat?portfolio_id={{ portfolio.id }}" class="btn btn-primary">
                 <i class="bi bi-chat-dots me-2"></i>AI Consultant
             </a>
-            <div class="btn-group">
-                <a href="/results/{{ portfolio.id }}" class="btn btn-outline-primary">
-                    <i class="bi bi-bar-chart me-2"></i>Results
-                </a>
-                <a href="/costs/{{ portfolio.id }}" class="btn btn-outline-warning">
-                    <i class="bi bi-currency-dollar me-2"></i>Costs
-                </a>
-                <a href="/compliance/{{ portfolio.id }}" class="btn btn-outline-info">
-                    <i class="bi bi-shield-check me-2"></i>Compliance
-                </a>
-            </div>
-            <div class="btn-group">
-                <a href="/whatif/{{ portfolio.id }}" class="btn btn-outline-danger">
-                    <i class="bi bi-lightning-charge me-2"></i>What-If
-                </a>
-                <a href="/roadmap/{{ portfolio.id }}" class="btn btn-outline-success">
-                    <i class="bi bi-map me-2"></i>Roadmap
-                </a>
-                <a href="/risk/{{ portfolio.id }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-shield-exclamation me-2"></i>Risk
-                </a>
-                <a href="/benchmark/{{ portfolio.id }}" class="btn btn-outline-dark">
-                    <i class="bi bi-speedometer2 me-2"></i>Benchmark
-                </a>
-            </div>
-            <div class="btn-group">
-                <a href="/dependencies/{{ portfolio.id }}" class="btn btn-outline-primary">
-                    <i class="bi bi-diagram-3 me-2"></i>Dependencies
-                </a>
-                <a href="/integrations/{{ portfolio.id }}" class="btn btn-outline-info">
-                    <i class="bi bi-plug me-2"></i>Integrations
-                </a>
-                <a href="/vendors/{{ portfolio.id }}" class="btn btn-outline-warning">
-                    <i class="bi bi-building me-2"></i>Vendors
-                </a>
-            </div>
         </div>
     </div>
 
@@ -99,10 +71,172 @@
         </div>
     </div>
 
+    <!-- Analysis Tools Grid -->
+    <h5 class="mb-3"><i class="bi bi-grid-1x2 me-2"></i>Analysis Tools</h5>
+    <div class="row g-3 mb-4">
+        <!-- Core Analysis -->
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/results/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-bar-chart display-6" style="color: var(--pt-interactive-primary);"></i>
+                    <div class="fw-semibold mt-2">Results</div>
+                    <small class="text-muted">TIME scoring & categories</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/costs/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-currency-dollar display-6" style="color: var(--pt-color-green-400);"></i>
+                    <div class="fw-semibold mt-2">Cost Analysis</div>
+                    <small class="text-muted">TCO, savings, hidden costs</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/compliance/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-shield-check display-6" style="color: var(--pt-color-blue-400);"></i>
+                    <div class="fw-semibold mt-2">Compliance</div>
+                    <small class="text-muted">Framework assessments</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/risk/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-shield-exclamation display-6" style="color: var(--pt-color-yellow-400);"></i>
+                    <div class="fw-semibold mt-2">Risk Assessment</div>
+                    <small class="text-muted">Risk scoring & analysis</small>
+                </div>
+            </a>
+        </div>
+        <!-- Strategic Planning -->
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/whatif/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-lightning-charge display-6" style="color: var(--pt-color-yellow-400);"></i>
+                    <div class="fw-semibold mt-2">What-If</div>
+                    <small class="text-muted">Scenario simulations</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/roadmap/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-map display-6" style="color: var(--pt-color-green-400);"></i>
+                    <div class="fw-semibold mt-2">Roadmap</div>
+                    <small class="text-muted">Phased implementation</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/budget/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-wallet2 display-6" style="color: var(--pt-interactive-accent);"></i>
+                    <div class="fw-semibold mt-2">Budget</div>
+                    <small class="text-muted">Allocation optimizer</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/migration/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-cloud-arrow-up display-6" style="color: var(--pt-interactive-primary);"></i>
+                    <div class="fw-semibold mt-2">Migration</div>
+                    <small class="text-muted">Cloud migration planner</small>
+                </div>
+            </a>
+        </div>
+        <!-- Deep Dive -->
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/dependencies/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-diagram-3 display-6" style="color: var(--pt-color-blue-400);"></i>
+                    <div class="fw-semibold mt-2">Dependencies</div>
+                    <small class="text-muted">App interconnections</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/integrations/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-plug display-6" style="color: var(--pt-color-green-400);"></i>
+                    <div class="fw-semibold mt-2">Integrations</div>
+                    <small class="text-muted">Integration health</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/vendors/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-building display-6" style="color: var(--pt-interactive-accent);"></i>
+                    <div class="fw-semibold mt-2">Vendors</div>
+                    <small class="text-muted">Vendor management</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/tech-debt/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-wrench display-6" style="color: var(--pt-color-red-400);"></i>
+                    <div class="fw-semibold mt-2">Tech Debt</div>
+                    <small class="text-muted">Debt assessment & sprints</small>
+                </div>
+            </a>
+        </div>
+        <!-- Advanced -->
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/lifecycle/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-hourglass-split display-6" style="color: var(--pt-color-yellow-400);"></i>
+                    <div class="fw-semibold mt-2">Lifecycle</div>
+                    <small class="text-muted">Stage management</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/benchmark/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-speedometer2 display-6" style="color: var(--pt-interactive-primary);"></i>
+                    <div class="fw-semibold mt-2">Benchmark</div>
+                    <small class="text-muted">Industry comparison</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/clustering/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-diagram-2 display-6" style="color: #8B5CF6;"></i>
+                    <div class="fw-semibold mt-2">ML Clustering</div>
+                    <small class="text-muted">Auto grouping</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/executive-dashboard/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-speedometer display-6" style="color: var(--pt-interactive-accent);"></i>
+                    <div class="fw-semibold mt-2">Executive</div>
+                    <small class="text-muted">C-suite dashboard</small>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-4 col-6">
+            <a href="/risk-heatmap/{{ portfolio.id }}" class="card h-100 text-decoration-none" style="cursor: pointer;">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-grid-3x3 display-6" style="color: var(--pt-color-red-400);"></i>
+                    <div class="fw-semibold mt-2">Risk Heat Map</div>
+                    <small class="text-muted">Multi-dimensional risk</small>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <!-- Applications Table -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-grid me-2"></i>Applications</h5>
+            <h5 class="mb-0"><i class="bi bi-grid me-2"></i>Applications ({{ portfolio.total_applications }})</h5>
             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addAppModal">
                 <i class="bi bi-plus-lg me-2"></i>Add Application
             </button>
@@ -111,7 +245,7 @@
             {% if applications %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="bg-light">
+                    <thead>
                         <tr>
                             <th>Application</th>
                             <th>Category</th>
@@ -236,7 +370,6 @@
                                 <option value="1">Yes</option>
                             </select>
                         </div>
-
                         <!-- Government Edition Fields -->
                         <div class="col-12"><hr><h6><i class="bi bi-bank me-2"></i>Government Dimensions (Optional)</h6></div>
                         <div class="col-md-4">
@@ -305,20 +438,14 @@ async function addApplication() {
         usage: parseFloat(document.getElementById('appUsage').value),
         redundancy: parseInt(document.getElementById('appRedundancy').value)
     };
-
-    // Government Edition fields (optional)
     const citizenImpact = document.getElementById('appCitizenImpact').value;
     if (citizenImpact) data.citizen_impact = parseFloat(citizenImpact);
-
     const missionCrit = document.getElementById('appMissionCrit').value;
     if (missionCrit) data.mission_criticality = parseFloat(missionCrit);
-
     const interop = document.getElementById('appInterop').value;
     if (interop) data.interoperability_score = parseFloat(interop);
-
     const dataSensitivity = document.getElementById('appDataSensitivity').value;
     if (dataSensitivity) data.data_sensitivity = dataSensitivity;
-
     data.system_of_record = document.getElementById('appSOR').value === '1';
     data.public_facing = document.getElementById('appPublicFacing').value === '1';
 
@@ -328,9 +455,7 @@ async function addApplication() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        if (response.ok) {
-            location.reload();
-        }
+        if (response.ok) location.reload();
     } catch (error) {
         alert('Error: ' + error.message);
     }
@@ -340,17 +465,11 @@ async function analyzePortfolio() {
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing...';
-
     try {
-        const response = await fetch(`/api/portfolios/${portfolioId}/analyze`, {
-            method: 'POST'
-        });
+        const response = await fetch(`/api/portfolios/${portfolioId}/analyze`, { method: 'POST' });
         const data = await response.json();
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
+        if (data.success) location.reload();
+        else alert('Error: ' + data.error);
     } catch (error) {
         alert('Error: ' + error.message);
     } finally {
@@ -361,7 +480,6 @@ async function analyzePortfolio() {
 
 async function deleteApp(appId) {
     if (!confirm('Delete this application?')) return;
-
     try {
         await fetch(`/api/applications/${appId}`, { method: 'DELETE' });
         location.reload();

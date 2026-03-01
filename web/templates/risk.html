@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}Risk Assessment - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'risk') }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">

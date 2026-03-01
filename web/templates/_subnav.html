@@ -1,0 +1,30 @@
+{% macro portfolio_subnav(portfolio_id, active_page) %}
+<div class="portfolio-subnav">
+    <div class="container">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'portfolio' }}" href="/portfolio/{{ portfolio_id }}"><i class="bi bi-folder2-open me-1"></i>Portfolio</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'results' }}" href="/results/{{ portfolio_id }}"><i class="bi bi-bar-chart me-1"></i>Results</a></li>
+            <li><div class="subnav-divider"></div></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'costs' }}" href="/costs/{{ portfolio_id }}"><i class="bi bi-currency-dollar me-1"></i>Costs</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'compliance' }}" href="/compliance/{{ portfolio_id }}"><i class="bi bi-shield-check me-1"></i>Compliance</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'risk' }}" href="/risk/{{ portfolio_id }}"><i class="bi bi-shield-exclamation me-1"></i>Risk</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'benchmark' }}" href="/benchmark/{{ portfolio_id }}"><i class="bi bi-speedometer2 me-1"></i>Benchmark</a></li>
+            <li><div class="subnav-divider"></div></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'whatif' }}" href="/whatif/{{ portfolio_id }}"><i class="bi bi-lightning-charge me-1"></i>What-If</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'roadmap' }}" href="/roadmap/{{ portfolio_id }}"><i class="bi bi-map me-1"></i>Roadmap</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'budget' }}" href="/budget/{{ portfolio_id }}"><i class="bi bi-wallet2 me-1"></i>Budget</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'migration' }}" href="/migration/{{ portfolio_id }}"><i class="bi bi-cloud-arrow-up me-1"></i>Migration</a></li>
+            <li><div class="subnav-divider"></div></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'dependencies' }}" href="/dependencies/{{ portfolio_id }}"><i class="bi bi-diagram-3 me-1"></i>Dependencies</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'integrations' }}" href="/integrations/{{ portfolio_id }}"><i class="bi bi-plug me-1"></i>Integrations</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'vendors' }}" href="/vendors/{{ portfolio_id }}"><i class="bi bi-building me-1"></i>Vendors</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'tech-debt' }}" href="/tech-debt/{{ portfolio_id }}"><i class="bi bi-wrench me-1"></i>Tech Debt</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'lifecycle' }}" href="/lifecycle/{{ portfolio_id }}"><i class="bi bi-hourglass-split me-1"></i>Lifecycle</a></li>
+            <li><div class="subnav-divider"></div></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'clustering' }}" href="/clustering/{{ portfolio_id }}"><i class="bi bi-diagram-2 me-1"></i>Clustering</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'executive' }}" href="/executive-dashboard/{{ portfolio_id }}"><i class="bi bi-speedometer me-1"></i>Executive</a></li>
+            <li class="nav-item"><a class="nav-link {{ 'active' if active_page == 'risk-heatmap' }}" href="/risk-heatmap/{{ portfolio_id }}"><i class="bi bi-grid-3x3 me-1"></i>Heat Map</a></li>
+        </ul>
+    </div>
+</div>
+{% endmacro %}

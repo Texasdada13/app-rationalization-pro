@@ -1,12 +1,15 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}Results - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'results') }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <h2>Rationalization Results</h2>
+            <h2><i class="bi bi-bar-chart me-2"></i>Rationalization Results</h2>
             <p class="text-muted">{{ portfolio.name }} - {{ portfolio.organization or '' }}</p>
         </div>
         <div class="d-flex gap-2">
@@ -31,7 +34,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning">
+            <div class="card bg-warning text-dark">
                 <div class="card-body text-center">
                     <div class="fs-1 fw-bold">{{ portfolio.tolerate_count }}</div>
                     <div>TOLERATE</div>
@@ -112,7 +115,7 @@
         <!-- TOLERATE -->
         <div class="col-md-6">
             <div class="card border-warning">
-                <div class="card-header bg-warning">
+                <div class="card-header bg-warning text-dark">
                     <h6 class="mb-0"><i class="bi bi-pause-circle me-2"></i>TOLERATE ({{ portfolio.tolerate_count }})</h6>
                 </div>
                 <div class="card-body p-0">

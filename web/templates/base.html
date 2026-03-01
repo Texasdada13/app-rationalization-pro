@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
 
     <!-- Prevent white flash -->
     <style>html { background: #0B1A2E; }</style>
@@ -105,6 +106,13 @@
             font-weight: 700;
             font-size: 1.4rem;
             color: white !important;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .navbar-brand img {
+            height: 36px;
         }
 
         .nav-link {
@@ -359,6 +367,9 @@
 
         /* === Bootstrap Dark Mode Overrides === */
         .text-dark { color: var(--pt-text-primary) !important; }
+        .bg-warning .text-dark,
+        .bg-warning.text-dark,
+        .bg-warning .badge.text-dark { color: #1B3A5C !important; }
         .text-muted { color: var(--pt-text-muted) !important; }
         .text-secondary { color: var(--pt-text-secondary) !important; }
         .bg-light { background: var(--pt-bg-surface) !important; }
@@ -586,8 +597,57 @@
             color: var(--pt-interactive-accent);
         }
 
+        /* Table row variants (dark mode) */
+        .table-danger { background: rgba(239, 68, 68, 0.1) !important; color: var(--pt-text-primary) !important; }
+        .table-warning { background: rgba(245, 158, 11, 0.1) !important; color: var(--pt-text-primary) !important; }
+        .table-success { background: rgba(16, 185, 129, 0.1) !important; color: var(--pt-text-primary) !important; }
+        .table-info { background: rgba(58, 123, 213, 0.1) !important; color: var(--pt-text-primary) !important; }
+
         /* Badge text */
         .badge { font-weight: 600; }
+        .badge.bg-light { color: var(--pt-text-primary) !important; }
+        .badge.bg-secondary { background: var(--pt-bg-surface) !important; color: var(--pt-text-secondary) !important; border: 1px solid var(--pt-border-default); }
+
+        /* Portfolio Sub-Navigation */
+        .portfolio-subnav {
+            background: var(--pt-bg-surface);
+            border-bottom: 1px solid var(--pt-border-default);
+            padding: 0;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .portfolio-subnav::-webkit-scrollbar { display: none; }
+        .portfolio-subnav .nav {
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            padding: 0.4rem 0;
+        }
+        .portfolio-subnav .nav-link {
+            color: var(--pt-text-muted) !important;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.3rem 0.75rem !important;
+            border-radius: 20px !important;
+            background: transparent !important;
+            border: none !important;
+            transition: all 0.15s;
+        }
+        .portfolio-subnav .nav-link:hover {
+            color: var(--pt-text-primary) !important;
+            background: rgba(255,255,255,0.06) !important;
+        }
+        .portfolio-subnav .nav-link.active {
+            color: var(--pt-color-navy-800) !important;
+            background: var(--pt-gradient-gold) !important;
+            font-weight: 600;
+        }
+        .portfolio-subnav .subnav-divider {
+            width: 1px;
+            background: var(--pt-border-default);
+            margin: 0.25rem 0.35rem;
+            align-self: stretch;
+        }
 
         /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
@@ -603,7 +663,8 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="bi bi-grid-3x3-gap-fill me-2"></i>{{ app_name }}
+                <img src="{{ url_for('static', filename='img/logo-shield.svg') }}" alt="Patriot Tech">
+                {{ app_name }}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -630,6 +691,9 @@
         </div>
     </nav>
 
+    <!-- Sub-Navigation (portfolio feature pages) -->
+    {% block subnav %}{% endblock %}
+
     <!-- Main Content -->
     <main>
         {% block content %}{% endblock %}
@@ -637,8 +701,21 @@
 
     <!-- Footer -->
     <footer>
-        <div class="container text-center">
-            <p class="mb-0">&copy; {{ current_year }} {{ company_name }}. Powered by PTS AI.</p>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 style="color: var(--pt-text-primary);">{{ app_name }}</h6>
+                    <p class="small mb-0" style="color: var(--pt-text-muted);">AI-powered application portfolio rationalization and optimization.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-1 small" style="color: var(--pt-text-muted);">
+                        &copy; {{ current_year }} Powered by <a href="https://patriottechsystems.com" target="_blank">Patriot Tech Systems</a>
+                    </p>
+                    <p class="mb-0 small">
+                        <a href="mailto:info@patriottechsystems.com">info@patriottechsystems.com</a>
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
 

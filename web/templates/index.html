@@ -280,7 +280,7 @@
                         </div>
                     </div>
                     <div class="text-center mt-4">
-                        <button class="btn btn-lg" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800); font-weight: 600;" onclick="createDemo()">
+                        <button id="indexDemoBtn" class="btn btn-lg" style="background: var(--pt-gradient-gold); color: var(--pt-color-navy-800); font-weight: 600;" onclick="createDemo()">
                             <i class="bi bi-magic me-2"></i>Create Demo Portfolio
                         </button>
                     </div>
@@ -333,7 +333,7 @@
 {% block extra_js %}
 <script>
 async function createDemo() {
-    const btn = event.target;
+    const btn = document.getElementById('indexDemoBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
 

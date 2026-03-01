@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}Roadmap - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'roadmap') }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -191,12 +194,12 @@ function displayMatrix(matrixData) {
                 x: {
                     title: {display: true, text: 'Effort →'},
                     min: 0, max: 100,
-                    grid: {color: (ctx) => ctx.tick.value === 40 ? '#ccc' : '#eee'}
+                    grid: {color: (ctx) => ctx.tick.value === 40 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}
                 },
                 y: {
                     title: {display: true, text: 'Impact →'},
                     min: 0, max: 100,
-                    grid: {color: (ctx) => ctx.tick.value === 60 ? '#ccc' : '#eee'}
+                    grid: {color: (ctx) => ctx.tick.value === 60 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}
                 }
             },
             plugins: {

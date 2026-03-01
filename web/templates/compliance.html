@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}Compliance Assessment - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'compliance') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -9,16 +12,16 @@
         transition: all 0.2s;
     }
     .framework-card:hover {
-        border-color: #3b82f6 !important;
+        border-color: var(--pt-interactive-primary) !important;
     }
     .framework-card.selected {
-        border-color: #3b82f6 !important;
-        background-color: #eff6ff;
+        border-color: var(--pt-interactive-primary) !important;
+        background-color: rgba(58, 123, 213, 0.1);
     }
-    .risk-critical { background-color: #fef2f2; border-left: 4px solid #ef4444; }
-    .risk-high { background-color: #fefce8; border-left: 4px solid #f59e0b; }
-    .risk-medium { background-color: #f0f9ff; border-left: 4px solid #3b82f6; }
-    .risk-low { background-color: #f0fdf4; border-left: 4px solid #10b981; }
+    .risk-critical { background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--pt-color-red-400); }
+    .risk-high { background-color: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--pt-color-yellow-400); }
+    .risk-medium { background-color: rgba(58, 123, 213, 0.1); border-left: 4px solid var(--pt-interactive-primary); }
+    .risk-low { background-color: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--pt-color-green-400); }
 </style>
 {% endblock %}
 
@@ -182,7 +185,7 @@
                             {% for assessment in fw_data.assessments %}
                             <tr class="{% if assessment.risk_level == 'Critical' %}table-danger{% elif assessment.risk_level == 'High' %}table-warning{% endif %}">
                                 <td>
-                                    <strong>{{ assessment.application_id }}</strong>
+                                    <strong>{{ assessment.application_name or assessment.application_id }}</strong>
                                 </td>
                                 <td class="text-center">
                                     <div class="progress" style="height: 20px;">

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}Application Lifecycle - {{ portfolio.name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'lifecycle') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -13,11 +16,11 @@
     .stage-sunset { background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); color: white; }
     .stage-retired { background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); color: white; }
 
-    .health-excellent { background-color: #d1fae5; color: #065f46; }
-    .health-good { background-color: #dbeafe; color: #1e40af; }
-    .health-fair { background-color: #fef3c7; color: #92400e; }
-    .health-poor { background-color: #fed7aa; color: #9a3412; }
-    .health-critical { background-color: #fecaca; color: #991b1b; }
+    .health-excellent { background: rgba(16, 185, 129, 0.15); color: var(--pt-color-green-400); }
+    .health-good { background: rgba(58, 123, 213, 0.15); color: var(--pt-color-blue-400); }
+    .health-fair { background: rgba(245, 158, 11, 0.15); color: var(--pt-color-yellow-400); }
+    .health-poor { background: rgba(249, 115, 22, 0.15); color: #F97316; }
+    .health-critical { background: rgba(239, 68, 68, 0.15); color: var(--pt-color-red-400); }
 
     .lifecycle-card { transition: all 0.2s; }
     .lifecycle-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
@@ -33,7 +36,7 @@
         top: 0;
         bottom: 0;
         width: 2px;
-        background: #e5e7eb;
+        background: var(--pt-border-default);
     }
     .timeline-node {
         position: relative;
@@ -46,15 +49,15 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #3b82f6;
-        border: 2px solid white;
-        box-shadow: 0 0 0 2px #3b82f6;
+        background: var(--pt-interactive-primary);
+        border: 2px solid var(--pt-bg-surface);
+        box-shadow: 0 0 0 2px var(--pt-interactive-primary);
     }
 
     .stage-progress {
         height: 6px;
         border-radius: 3px;
-        background: #e5e7eb;
+        background: var(--pt-border-default);
         overflow: hidden;
     }
     .stage-progress-fill {
@@ -72,21 +75,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero">
-    <div class="container">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
-                <li class="breadcrumb-item active text-white">Lifecycle Management</li>
-            </ol>
-        </nav>
-        <h1><i class="bi bi-arrow-repeat me-2"></i>Application Lifecycle Management</h1>
-        <p class="lead mb-0">Track applications from inception to retirement</p>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-arrow-repeat me-2"></i>Application Lifecycle Management</h2>
+            <p class="text-muted">{{ portfolio.name }} — Track applications from inception to retirement</p>
+        </div>
     </div>
-</div>
-
-<div class="container mb-5">
     <!-- Summary Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-3">
@@ -467,7 +462,7 @@ function renderStageChart(distribution) {
                 data: values,
                 backgroundColor: colors,
                 borderWidth: 2,
-                borderColor: '#fff'
+                borderColor: 'transparent'
             }]
         },
         options: {

@@ -108,9 +108,35 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    """Main dashboard showing portfolio overview."""
+    """Main dashboard showing portfolio overview with aggregate analytics."""
     portfolios = Portfolio.query.order_by(Portfolio.updated_at.desc()).all()
-    return render_template('dashboard.html', portfolios=portfolios)
+
+    # Compute aggregate stats across all portfolios
+    total_apps = sum(p.total_applications for p in portfolios)
+    total_cost = sum(p.total_cost or 0 for p in portfolios)
+    avg_score = (sum(p.average_score or 0 for p in portfolios) / len(portfolios)) if portfolios else 0
+    time_totals = {
+        'invest': sum(p.invest_count or 0 for p in portfolios),
+        'tolerate': sum(p.tolerate_count or 0 for p in portfolios),
+        'migrate': sum(p.migrate_count or 0 for p in portfolios),
+        'eliminate': sum(p.eliminate_count or 0 for p in portfolios),
+    }
+
+    # Get total savings identified from cost analyses
+    total_savings = 0
+    try:
+        analyses = CostAnalysis.query.all()
+        total_savings = sum(a.potential_savings or 0 for a in analyses)
+    except Exception:
+        pass
+
+    return render_template('dashboard.html',
+                          portfolios=portfolios,
+                          total_apps=total_apps,
+                          total_cost=total_cost,
+                          avg_score=avg_score,
+                          time_totals=time_totals,
+                          total_savings=total_savings)
 
 
 @app.route('/chat')
@@ -520,6 +546,9 @@ def compliance_page(portfolio_id):
     engine = ComplianceEngine()
     frameworks = engine.list_frameworks()
 
+    # Build app name lookup for display
+    app_names = {str(a.id): a.name for a in applications}
+
     compliance_data = {}
     for fw in frameworks:
         fw_name = fw['name']
@@ -528,8 +557,13 @@ def compliance_page(portfolio_id):
             framework=fw_name
         ).all()
         if results:
+            assessments = []
+            for r in results:
+                d = r.to_dict()
+                d['application_name'] = app_names.get(r.application_id, r.application_id)
+                assessments.append(d)
             compliance_data[fw_name] = {
-                'assessments': [r.to_dict() for r in results],
+                'assessments': assessments,
                 'avg_compliance': sum(r.compliance_percentage for r in results) / len(results) if results else 0
             }
 
@@ -1012,7 +1046,8 @@ def change_chat_mode():
 # =============================================================================
 
 FEATURE_ROUTES = {
-    'scoring': '/results/{id}',
+    'scoring': '/benchmark/{id}',
+    'results': '/results/{id}',
     'time': '/results/{id}',
     'chat': '/chat',
     'costs': '/costs/{id}',
@@ -1029,8 +1064,11 @@ FEATURE_ROUTES = {
     'clustering': '/clustering/{id}',
     'migration': '/migration/{id}',
     'executive': '/executive-dashboard/{id}',
+    'executive-dashboard': '/executive-dashboard/{id}',
     'budget': '/budget/{id}',
     'risk-heatmap': '/risk-heatmap/{id}',
+    'portfolio': '/portfolio/{id}',
+    'dashboard': '/dashboard',
 }
 
 
@@ -1172,6 +1210,58 @@ def create_demo_data():
 
         db.session.commit()
         portfolio.update_metrics()
+
+        # Auto-run cost analysis so costs page has data
+        try:
+            app_dicts = [a.to_dict() for a in portfolio.applications.all()]
+            cost_modeler = CostModeler(app_dicts)
+            tco_summary = cost_modeler.calculate_tco_breakdown()
+            cost_modeler.identify_hidden_costs()
+            optimization = cost_modeler.get_cost_optimization_summary()
+
+            cost_analysis = CostAnalysis(
+                portfolio_id=portfolio.id,
+                total_portfolio_cost=optimization['current_portfolio_cost'],
+                hidden_costs_total=optimization['hidden_costs_total'],
+                potential_savings=optimization['potential_savings'],
+                savings_percentage=optimization['savings_percentage'],
+                component_breakdown=tco_summary['component_breakdown'],
+                department_allocation=optimization['department_allocation'],
+                hidden_cost_categories=optimization['hidden_cost_categories'],
+                quick_wins=optimization['quick_wins'],
+                top_opportunities=optimization['top_opportunities']
+            )
+            db.session.add(cost_analysis)
+        except Exception as e:
+            logger.warning(f"Cost analysis pre-population failed for {portfolio.name}: {e}")
+
+        # Auto-run compliance assessments so compliance page has data
+        try:
+            compliance_engine = ComplianceEngine()
+            for fw in compliance_engine.list_frameworks():
+                fw_name = fw['name']
+                results = compliance_engine.batch_assess(app_dicts, fw_name)
+                if 'error' not in results:
+                    for assessment in results['application_assessments']:
+                        result = ComplianceResult(
+                            application_id=assessment.get('application_id'),
+                            portfolio_id=portfolio.id,
+                            framework=fw_name,
+                            compliance_percentage=assessment['compliance_percentage'],
+                            compliance_level=assessment['compliance_level'],
+                            risk_level=assessment['risk_level'],
+                            total_requirements=assessment['total_requirements'],
+                            compliant_count=assessment['compliant_count'],
+                            partial_count=assessment['partial_count'],
+                            non_compliant_count=assessment['non_compliant_count'],
+                            critical_gaps_count=assessment['critical_gaps_count'],
+                            requirement_results=assessment['requirement_results'],
+                            gaps=assessment['gaps'],
+                            critical_gaps=assessment['critical_gaps']
+                        )
+                        db.session.add(result)
+        except Exception as e:
+            logger.warning(f"Compliance pre-population failed for {portfolio.name}: {e}")
 
     db.session.commit()
 
@@ -2467,11 +2557,11 @@ def api_clustering_analyze(portfolio_id):
             features = ApplicationFeatures(
                 app_id=str(app.id), app_name=app.name,
                 business_value=app.business_value / 100 if app.business_value else 0.5,
-                technical_health=app.technical_health / 100 if app.technical_health else 0.5,
-                cost_efficiency=0.5, risk_score=app.risk_score / 100 if app.risk_score else 0.3,
+                technical_health=app.tech_health / 100 if app.tech_health else 0.5,
+                cost_efficiency=0.5, risk_score=(10 - app.security) / 10 if app.security else 0.3,
                 user_adoption=0.5, integration_complexity=0.5, compliance_score=0.7, modernization_readiness=0.5,
                 category=app.category or '', vendor=app.vendor or '',
-                annual_cost=app.cost or 0, user_count=app.user_base_size or 0
+                annual_cost=app.cost or 0, user_count=int(app.usage or 0)
             )
             engine.add_application(features)
 
@@ -2506,10 +2596,10 @@ def api_migration_plan(portfolio_id):
         for app in applications:
             profile = ApplicationMigrationProfile(
                 app_id=str(app.id), app_name=app.name,
-                cloud_readiness=app.technical_health / 100 if app.technical_health else 0.5,
+                cloud_readiness=app.tech_health / 100 if app.tech_health else 0.5,
                 business_criticality=app.business_value / 100 if app.business_value else 0.5,
-                technical_debt=1 - (app.technical_health / 100) if app.technical_health else 0.3,
-                current_annual_cost=app.cost or 0, estimated_users=app.user_base_size or 0
+                technical_debt=1 - (app.tech_health / 100) if app.tech_health else 0.3,
+                current_annual_cost=app.cost or 0, estimated_users=int(app.usage or 0)
             )
             planner.add_application(profile)
 
@@ -2541,10 +2631,10 @@ def api_portfolio_dashboard(portfolio_id):
         for app in applications:
             app_data = ApplicationData(
                 app_id=str(app.id), app_name=app.name,
-                annual_cost=app.cost or 0, user_count=app.user_base_size or 0, age_years=3.0,
+                annual_cost=app.cost or 0, user_count=int(app.usage or 0), age_years=3.0,
                 business_value=app.business_value / 100 if app.business_value else 0.5,
-                technical_health=app.technical_health / 100 if app.technical_health else 0.5,
-                risk_score=app.risk_score / 100 if app.risk_score else 0.3,
+                technical_health=app.tech_health / 100 if app.tech_health else 0.5,
+                risk_score=(10 - app.security) / 10 if app.security else 0.3,
                 time_recommendation=app.time_category or 'tolerate',
                 category=app.category or '', vendor=app.vendor or ''
             )
@@ -2582,8 +2672,8 @@ def api_budget_optimize(portfolio_id):
                 app_id=str(app.id), app_name=app.name,
                 current_budget=app.cost or 50000, current_cost=app.cost or 50000,
                 business_value=app.business_value / 100 if app.business_value else 0.5,
-                technical_health=app.technical_health / 100 if app.technical_health else 0.5,
-                risk_score=app.risk_score / 100 if app.risk_score else 0.3,
+                technical_health=app.tech_health / 100 if app.tech_health else 0.5,
+                risk_score=(10 - app.security) / 10 if app.security else 0.3,
                 category=app.category or ''
             )
             optimizer.add_application(profile)

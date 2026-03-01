@@ -1,149 +1,155 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
-{% block title %}Migration Planner - {{ portfolio.name }}{% endblock %}
+{% block title %}Migration Planner - {{ portfolio.name }} - {{ app_name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'migration') }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container py-4">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-8">
+    <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <nav class="text-sm breadcrumbs mb-2">
-                <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">Dashboard</a>
-                <span class="mx-2">/</span>
-                <a href="{{ url_for('portfolio_detail', portfolio_id=portfolio.id) }}" class="text-blue-600 hover:underline">{{ portfolio.name }}</a>
-                <span class="mx-2">/</span>
-                <span class="text-gray-600">Migration Planner</span>
-            </nav>
-            <h1 class="text-3xl font-bold text-gray-900">Cloud Migration Planner</h1>
-            <p class="text-gray-600 mt-1">7R Strategy-based migration planning and wave optimization</p>
+            <h2><i class="bi bi-cloud-arrow-up me-2"></i>Cloud Migration Planner</h2>
+            <p class="text-muted">{{ portfolio.name }} — 7R Strategy-based migration planning and wave optimization</p>
         </div>
-        <div class="flex gap-3">
-            <select id="cloudProvider" class="border rounded-lg px-3 py-2">
+        <div class="d-flex gap-2 align-items-center">
+            <select id="cloudProvider" class="form-select" style="width: auto;">
                 <option value="aws">AWS</option>
                 <option value="azure">Azure</option>
                 <option value="gcp">Google Cloud</option>
             </select>
-            <button onclick="generatePlan()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                Generate Plan
+            <button onclick="generatePlan()" class="btn btn-primary">
+                <i class="bi bi-play-fill me-2"></i>Generate Plan
             </button>
         </div>
     </div>
 
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-        <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div class="text-sm text-gray-500">Total Apps</div>
-            <div class="text-2xl font-bold text-gray-900" id="totalApps">-</div>
+    <div class="row g-3 mb-4">
+        <div class="col">
+            <div class="card text-center p-3">
+                <small class="text-muted">Total Apps</small>
+                <div class="fs-3 fw-bold" id="totalApps">-</div>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div class="text-sm text-gray-500">To Migrate</div>
-            <div class="text-2xl font-bold text-blue-600" id="toMigrate">-</div>
+        <div class="col">
+            <div class="card text-center p-3">
+                <small class="text-muted">To Migrate</small>
+                <div class="fs-3 fw-bold" style="color: var(--pt-interactive-primary);" id="toMigrate">-</div>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div class="text-sm text-gray-500">To Retire</div>
-            <div class="text-2xl font-bold text-red-600" id="toRetire">-</div>
+        <div class="col">
+            <div class="card text-center p-3">
+                <small class="text-muted">To Retire</small>
+                <div class="fs-3 fw-bold" style="color: var(--pt-color-red-400);" id="toRetire">-</div>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div class="text-sm text-gray-500">Migration Cost</div>
-            <div class="text-2xl font-bold text-orange-600" id="migrationCost">-</div>
+        <div class="col">
+            <div class="card text-center p-3">
+                <small class="text-muted">Migration Cost</small>
+                <div class="fs-3 fw-bold" style="color: var(--pt-color-yellow-400);" id="migrationCost">-</div>
+            </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
-            <div class="text-sm text-gray-500">Annual Savings</div>
-            <div class="text-2xl font-bold text-green-600" id="annualSavings">-</div>
+        <div class="col">
+            <div class="card text-center p-3">
+                <small class="text-muted">Annual Savings</small>
+                <div class="fs-3 fw-bold" style="color: var(--pt-color-green-400);" id="annualSavings">-</div>
+            </div>
         </div>
     </div>
 
     <!-- Tabs -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="flex border-b">
-            <button onclick="showTab('overview')" id="tab-overview" class="px-6 py-3 font-medium text-blue-600 border-b-2 border-blue-600">Overview</button>
-            <button onclick="showTab('waves')" id="tab-waves" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">Migration Waves</button>
-            <button onclick="showTab('strategy')" id="tab-strategy" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">Strategy Distribution</button>
-            <button onclick="showTab('timeline')" id="tab-timeline" class="px-6 py-3 font-medium text-gray-500 hover:text-gray-700">Timeline</button>
+    <div class="card">
+        <div class="card-header p-0">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-overview" role="tab">Overview</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-waves" role="tab">Migration Waves</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-strategy" role="tab">Strategy Distribution</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-timeline" role="tab">Timeline</a></li>
+            </ul>
         </div>
-
-        <!-- Overview Tab -->
-        <div id="content-overview" class="p-6">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="text-lg font-semibold mb-4">Strategy Distribution</h3>
-                    <canvas id="strategyChart" height="250"></canvas>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold mb-4">Cloud Provider Distribution</h3>
-                    <canvas id="providerChart" height="250"></canvas>
-                </div>
-            </div>
-            <div class="mt-6">
-                <h3 class="text-lg font-semibold mb-4">ROI Analysis</h3>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="p-4 bg-blue-50 rounded-lg">
-                        <div class="text-sm text-blue-600">Payback Period</div>
-                        <div class="text-2xl font-bold text-blue-700" id="paybackPeriod">-</div>
+        <div class="card-body">
+            <div class="tab-content">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="tab-overview" role="tabpanel">
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-6">
+                            <h6><i class="bi bi-diagram-3 me-2"></i>Strategy Distribution</h6>
+                            <canvas id="strategyChart" height="250"></canvas>
+                        </div>
+                        <div class="col-lg-6">
+                            <h6><i class="bi bi-cloud me-2"></i>Cloud Provider Distribution</h6>
+                            <canvas id="providerChart" height="250"></canvas>
+                        </div>
                     </div>
-                    <div class="p-4 bg-green-50 rounded-lg">
-                        <div class="text-sm text-green-600">3-Year ROI</div>
-                        <div class="text-2xl font-bold text-green-700" id="roiPercentage">-</div>
-                    </div>
-                    <div class="p-4 bg-purple-50 rounded-lg">
-                        <div class="text-sm text-purple-600">Duration</div>
-                        <div class="text-2xl font-bold text-purple-700" id="totalDuration">-</div>
+                    <h6><i class="bi bi-graph-up me-2"></i>ROI Analysis</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card p-3 text-center" style="background: rgba(58, 123, 213, 0.1);">
+                                <small style="color: var(--pt-interactive-primary);">Payback Period</small>
+                                <div class="fs-4 fw-bold" id="paybackPeriod">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 text-center" style="background: rgba(16, 185, 129, 0.1);">
+                                <small style="color: var(--pt-color-green-400);">3-Year ROI</small>
+                                <div class="fs-4 fw-bold" style="color: var(--pt-color-green-400);" id="roiPercentage">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 text-center" style="background: rgba(139, 92, 246, 0.1);">
+                                <small style="color: #8B5CF6;">Duration</small>
+                                <div class="fs-4 fw-bold" style="color: #8B5CF6;" id="totalDuration">-</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Waves Tab -->
-        <div id="content-waves" class="p-6 hidden">
-            <div id="wavesList" class="space-y-6">
-                <p class="text-gray-500 text-center py-8">Generate a plan to see migration waves</p>
-            </div>
-        </div>
+                <!-- Waves Tab -->
+                <div class="tab-pane fade" id="tab-waves" role="tabpanel">
+                    <div id="wavesList">
+                        <p class="text-muted text-center py-5">Generate a plan to see migration waves</p>
+                    </div>
+                </div>
 
-        <!-- Strategy Tab -->
-        <div id="content-strategy" class="p-6 hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Application</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Strategy</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Complexity</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Savings</th>
-                    </tr>
-                </thead>
-                <tbody id="strategyTableBody" class="divide-y divide-gray-200"></tbody>
-            </table>
-        </div>
+                <!-- Strategy Tab -->
+                <div class="tab-pane fade" id="tab-strategy" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Application</th>
+                                    <th>Strategy</th>
+                                    <th>Target</th>
+                                    <th>Complexity</th>
+                                    <th>Cost</th>
+                                    <th>Savings</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategyTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-        <!-- Timeline Tab -->
-        <div id="content-timeline" class="p-6 hidden">
-            <div id="timelineView" class="relative">
-                <p class="text-gray-500 text-center py-8">Generate a plan to see timeline</p>
+                <!-- Timeline Tab -->
+                <div class="tab-pane fade" id="tab-timeline" role="tabpanel">
+                    <div id="timelineView">
+                        <p class="text-muted text-center py-5">Generate a plan to see timeline</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block extra_js %}
 <script>
 const portfolioId = "{{ portfolio.id }}";
 let migrationPlan = null;
 let strategyChart = null;
 let providerChart = null;
-
-function showTab(tab) {
-    document.querySelectorAll('[id^="content-"]').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('[id^="tab-"]').forEach(el => {
-        el.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-        el.classList.add('text-gray-500');
-    });
-    document.getElementById('content-' + tab).classList.remove('hidden');
-    const tabEl = document.getElementById('tab-' + tab);
-    tabEl.classList.remove('text-gray-500');
-    tabEl.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
-}
 
 async function generatePlan() {
     const provider = document.getElementById('cloudProvider').value;
@@ -161,7 +167,6 @@ async function generatePlan() {
 }
 
 function renderPlan(plan) {
-    // Update summary
     document.getElementById('totalApps').textContent = plan.total_applications;
     document.getElementById('toMigrate').textContent = plan.applications_to_migrate;
     document.getElementById('toRetire').textContent = plan.applications_to_retire;
@@ -171,7 +176,6 @@ function renderPlan(plan) {
     document.getElementById('roiPercentage').textContent = plan.roi_percentage.toFixed(0) + '%';
     document.getElementById('totalDuration').textContent = plan.total_duration_weeks + ' weeks';
 
-    // Strategy chart
     renderStrategyChart(plan.strategy_distribution);
     renderProviderChart(plan.provider_distribution);
     renderWaves(plan.waves);
@@ -182,10 +186,9 @@ function renderPlan(plan) {
 function renderStrategyChart(distribution) {
     const ctx = document.getElementById('strategyChart').getContext('2d');
     if (strategyChart) strategyChart.destroy();
-
     const colors = {
-        rehost: '#3B82F6', replatform: '#10B981', refactor: '#8B5CF6',
-        repurchase: '#F59E0B', retire: '#EF4444', retain: '#6B7280', relocate: '#EC4899'
+        rehost: '#3A7BD5', replatform: '#10B981', refactor: '#8B5CF6',
+        repurchase: '#F59E0B', retire: '#EF4444', retain: '#5A7A9A', relocate: '#EC4899'
     };
 
     strategyChart = new Chart(ctx, {
@@ -194,7 +197,8 @@ function renderStrategyChart(distribution) {
             labels: Object.keys(distribution).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
             datasets: [{
                 data: Object.values(distribution),
-                backgroundColor: Object.keys(distribution).map(k => colors[k] || '#999')
+                backgroundColor: Object.keys(distribution).map(k => colors[k] || '#999'),
+                borderWidth: 0
             }]
         },
         options: { responsive: true, plugins: { legend: { position: 'right' } } }
@@ -204,8 +208,7 @@ function renderStrategyChart(distribution) {
 function renderProviderChart(distribution) {
     const ctx = document.getElementById('providerChart').getContext('2d');
     if (providerChart) providerChart.destroy();
-
-    const colors = { aws: '#FF9900', azure: '#0089D6', gcp: '#4285F4', on_premises: '#6B7280 '};
+    const colors = { aws: '#FF9900', azure: '#0089D6', gcp: '#4285F4', on_premises: '#5A7A9A' };
 
     providerChart = new Chart(ctx, {
         type: 'pie',
@@ -213,7 +216,8 @@ function renderProviderChart(distribution) {
             labels: Object.keys(distribution).map(k => k.toUpperCase().replace('_', ' ')),
             datasets: [{
                 data: Object.values(distribution),
-                backgroundColor: Object.keys(distribution).map(k => colors[k] || '#999')
+                backgroundColor: Object.keys(distribution).map(k => colors[k] || '#999'),
+                borderWidth: 0
             }]
         },
         options: { responsive: true, plugins: { legend: { position: 'right' } } }
@@ -223,39 +227,39 @@ function renderProviderChart(distribution) {
 function renderWaves(waves) {
     const container = document.getElementById('wavesList');
     container.innerHTML = waves.map(wave => `
-        <div class="border rounded-lg overflow-hidden">
-            <div class="bg-gray-50 px-4 py-3 flex justify-between items-center">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--pt-bg-surface);">
                 <div>
-                    <span class="font-semibold">Wave ${wave.wave_id + 1}: ${wave.name}</span>
-                    <span class="text-gray-500 ml-2">(${wave.application_count} apps)</span>
+                    <strong>Wave ${wave.wave_id + 1}: ${wave.name}</strong>
+                    <span class="text-muted ms-2">(${wave.application_count} apps)</span>
                 </div>
-                <div class="text-sm text-gray-500">
+                <small class="text-muted">
                     ${wave.start_date ? new Date(wave.start_date).toLocaleDateString() : 'TBD'} -
                     ${wave.end_date ? new Date(wave.end_date).toLocaleDateString() : 'TBD'}
-                </div>
+                </small>
             </div>
-            <div class="p-4">
-                <div class="grid grid-cols-4 gap-4 mb-4">
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Duration</div>
-                        <div class="font-bold">${wave.duration_weeks} weeks</div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-3 text-center">
+                        <small class="text-muted d-block">Duration</small>
+                        <strong>${wave.duration_weeks} weeks</strong>
                     </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Effort</div>
-                        <div class="font-bold">${wave.total_effort_hours} hours</div>
+                    <div class="col-3 text-center">
+                        <small class="text-muted d-block">Effort</small>
+                        <strong>${wave.total_effort_hours} hours</strong>
                     </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Cost</div>
-                        <div class="font-bold text-orange-600">$${wave.total_cost.toLocaleString()}</div>
+                    <div class="col-3 text-center">
+                        <small class="text-muted d-block">Cost</small>
+                        <strong style="color: var(--pt-color-yellow-400);">$${wave.total_cost.toLocaleString()}</strong>
                     </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Savings/yr</div>
-                        <div class="font-bold text-green-600">$${wave.total_savings.toLocaleString()}</div>
+                    <div class="col-3 text-center">
+                        <small class="text-muted d-block">Savings/yr</small>
+                        <strong style="color: var(--pt-color-green-400);">$${wave.total_savings.toLocaleString()}</strong>
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
+                <div class="d-flex flex-wrap gap-2">
                     ${wave.applications.map(app => `
-                        <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">${app.app_name}</span>
+                        <span class="badge" style="background: rgba(58, 123, 213, 0.15); color: var(--pt-color-blue-400);">${app.app_name}</span>
                     `).join('')}
                 </div>
             </div>
@@ -267,30 +271,31 @@ function renderStrategyTable(waves) {
     const allApps = waves.flatMap(w => w.applications);
     const tbody = document.getElementById('strategyTableBody');
 
+    const strategyBadge = (s) => {
+        const map = {
+            rehost: 'rgba(58,123,213,0.15);color:var(--pt-color-blue-400)',
+            replatform: 'rgba(16,185,129,0.15);color:var(--pt-color-green-400)',
+            refactor: 'rgba(139,92,246,0.15);color:#8B5CF6',
+            retire: 'rgba(239,68,68,0.15);color:var(--pt-color-red-400)',
+        };
+        const style = map[s] || 'rgba(90,122,154,0.15);color:var(--pt-text-secondary)';
+        return `<span class="badge" style="background:${style};">${s}</span>`;
+    };
+
+    const complexityBadge = (c) => {
+        if (c === 'high' || c === 'very_high') return `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--pt-color-red-400);">${c}</span>`;
+        if (c === 'medium') return `<span class="badge" style="background:rgba(245,158,11,0.15);color:var(--pt-color-yellow-400);">${c}</span>`;
+        return `<span class="badge" style="background:rgba(16,185,129,0.15);color:var(--pt-color-green-400);">${c}</span>`;
+    };
+
     tbody.innerHTML = allApps.map(app => `
         <tr>
-            <td class="px-4 py-3 font-medium">${app.app_name}</td>
-            <td class="px-4 py-3">
-                <span class="px-2 py-1 rounded text-sm
-                    ${app.primary_strategy === 'rehost' ? 'bg-blue-100 text-blue-700' :
-                      app.primary_strategy === 'replatform' ? 'bg-green-100 text-green-700' :
-                      app.primary_strategy === 'refactor' ? 'bg-purple-100 text-purple-700' :
-                      app.primary_strategy === 'retire' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'}">
-                    ${app.primary_strategy}
-                </span>
-            </td>
-            <td class="px-4 py-3 text-sm">${app.target_provider.toUpperCase()}</td>
-            <td class="px-4 py-3">
-                <span class="px-2 py-1 rounded text-xs
-                    ${app.complexity === 'high' || app.complexity === 'very_high' ? 'bg-red-100 text-red-700' :
-                      app.complexity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'}">
-                    ${app.complexity}
-                </span>
-            </td>
-            <td class="px-4 py-3 text-orange-600">$${app.estimated_cost.toLocaleString()}</td>
-            <td class="px-4 py-3 text-green-600">$${app.estimated_annual_savings.toLocaleString()}</td>
+            <td class="fw-medium">${app.app_name}</td>
+            <td>${strategyBadge(app.primary_strategy)}</td>
+            <td class="small">${app.target_provider.toUpperCase()}</td>
+            <td>${complexityBadge(app.complexity)}</td>
+            <td style="color: var(--pt-color-yellow-400);">$${app.estimated_cost.toLocaleString()}</td>
+            <td style="color: var(--pt-color-green-400);">$${app.estimated_annual_savings.toLocaleString()}</td>
         </tr>
     `).join('');
 }
@@ -300,20 +305,20 @@ function renderTimeline(waves) {
     if (waves.length === 0) return;
 
     container.innerHTML = `
-        <div class="relative">
-            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+        <div class="position-relative" style="padding-left: 40px;">
+            <div class="position-absolute" style="left: 16px; top: 0; bottom: 0; width: 2px; background: var(--pt-border-default);"></div>
             ${waves.map((wave, idx) => `
-                <div class="relative pl-10 pb-8">
-                    <div class="absolute left-2.5 w-3 h-3 rounded-full bg-blue-600"></div>
-                    <div class="bg-white border rounded-lg p-4 shadow-sm">
-                        <div class="flex justify-between items-start">
+                <div class="position-relative pb-4">
+                    <div class="position-absolute" style="left: -30px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--pt-interactive-primary);"></div>
+                    <div class="card p-3">
+                        <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <div class="font-semibold">Wave ${idx + 1}: ${wave.name}</div>
-                                <div class="text-sm text-gray-500">${wave.duration_weeks} weeks | ${wave.application_count} applications</div>
+                                <strong>Wave ${idx + 1}: ${wave.name}</strong>
+                                <div class="text-muted small">${wave.duration_weeks} weeks | ${wave.application_count} applications</div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-sm text-gray-500">${wave.start_date ? new Date(wave.start_date).toLocaleDateString() : 'TBD'}</div>
-                                <div class="font-medium text-green-600">+$${wave.total_savings.toLocaleString()}/yr</div>
+                            <div class="text-end">
+                                <small class="text-muted">${wave.start_date ? new Date(wave.start_date).toLocaleDateString() : 'TBD'}</small>
+                                <div class="fw-medium" style="color: var(--pt-color-green-400);">+$${wave.total_savings.toLocaleString()}/yr</div>
                             </div>
                         </div>
                     </div>
@@ -323,7 +328,6 @@ function renderTimeline(waves) {
     `;
 }
 
-// Initial load
 generatePlan();
 </script>
 {% endblock %}

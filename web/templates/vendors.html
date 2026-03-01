@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% from "_subnav.html" import portfolio_subnav %}
 
 {% block title %}Vendor Management - {{ portfolio.name }}{% endblock %}
+
+{% block subnav %}{{ portfolio_subnav(portfolio.id, 'vendors') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -8,11 +11,11 @@
     .tier-tactical { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; }
     .tier-commodity { background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); color: white; }
     .tier-emerging { background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%); color: white; }
-    .risk-critical { background-color: #fecaca; color: #991b1b; }
-    .risk-high { background-color: #fed7aa; color: #9a3412; }
-    .risk-medium { background-color: #fef3c7; color: #92400e; }
-    .risk-low { background-color: #d1fae5; color: #065f46; }
-    .risk-minimal { background-color: #dbeafe; color: #1e40af; }
+    .risk-critical { background: rgba(239, 68, 68, 0.15); color: var(--pt-color-red-400); }
+    .risk-high { background: rgba(249, 115, 22, 0.15); color: #F97316; }
+    .risk-medium { background: rgba(245, 158, 11, 0.15); color: var(--pt-color-yellow-400); }
+    .risk-low { background: rgba(16, 185, 129, 0.15); color: var(--pt-color-green-400); }
+    .risk-minimal { background: rgba(58, 123, 213, 0.15); color: var(--pt-color-blue-400); }
     .vendor-card { transition: all 0.2s; cursor: pointer; }
     .vendor-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
     .contract-warning { border-left: 4px solid #f59e0b; }
@@ -21,21 +24,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero">
-    <div class="container">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="/dashboard" class="text-white-50">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="/portfolio/{{ portfolio.id }}" class="text-white-50">{{ portfolio.name }}</a></li>
-                <li class="breadcrumb-item active text-white">Vendors</li>
-            </ol>
-        </nav>
-        <h1><i class="bi bi-building me-2"></i>Vendor Risk Management</h1>
-        <p class="lead mb-0">Manage vendor relationships and assess risks</p>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2><i class="bi bi-building me-2"></i>Vendor Risk Management</h2>
+            <p class="text-muted">{{ portfolio.name }} — Manage vendor relationships and assess risks</p>
+        </div>
     </div>
-</div>
-
-<div class="container mb-5">
     <!-- Summary Cards -->
     <div class="row g-4 mb-4">
         <div class="col-md-3">
@@ -393,7 +388,7 @@ function renderVendorGrid(vendors) {
                 <div class="card-header tier-${v.tier || 'tactical'}">
                     <div class="d-flex justify-content-between align-items-center">
                         <strong>${v.name}</strong>
-                        <span class="badge bg-light text-dark">${(v.tier || 'tactical').toUpperCase()}</span>
+                        <span class="badge" style="background: var(--pt-bg-surface); color: var(--pt-text-secondary); border: 1px solid var(--pt-border-default);">${(v.tier || 'tactical').toUpperCase()}</span>
                     </div>
                 </div>
                 <div class="card-body">
