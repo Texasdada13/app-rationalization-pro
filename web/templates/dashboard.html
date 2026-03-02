@@ -4,30 +4,69 @@
 
 {% block extra_css %}
 <style>
+    /* Metric cards matching patriot-ui-kit pt-metric-card */
     .kpi-card {
         position: relative;
         overflow: hidden;
+        padding: 1.25rem;
     }
-    .kpi-card::after {
+    .kpi-card::before {
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0;
         height: 3px;
+        background: var(--pt-gradient-primary);
         opacity: 0;
         transition: opacity 0.2s;
     }
-    .kpi-card:hover::after { opacity: 1; }
-    .kpi-gold::after { background: var(--pt-gradient-gold); }
-    .kpi-green::after { background: var(--pt-color-green-400); }
-    .kpi-blue::after { background: var(--pt-interactive-primary); }
-    .kpi-red::after { background: var(--pt-color-red-400); }
+    .kpi-card:hover::before { opacity: 1; }
+    .kpi-card:hover {
+        border-color: var(--pt-border-accent);
+        transform: translateY(-2px);
+        box-shadow: var(--pt-shadow-md);
+    }
+    .kpi-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+    .kpi-label {
+        font-size: 0.72rem;
+        color: var(--pt-text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .kpi-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .kpi-icon.gold  { background: rgba(201, 168, 76, 0.15); color: var(--pt-color-gold-400); }
+    .kpi-icon.blue  { background: rgba(58, 123, 213, 0.15); color: var(--pt-color-blue-400); }
+    .kpi-icon.green { background: rgba(16, 185, 129, 0.12); color: var(--pt-color-green-400); }
+    .kpi-icon.red   { background: rgba(239, 68, 68, 0.12);  color: var(--pt-color-red-400); }
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--pt-text-primary);
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    .kpi-subtitle { font-size: 0.75rem; color: var(--pt-text-muted); }
 
     .portfolio-card {
         transition: all 0.2s ease;
         border: 1px solid var(--pt-border-default);
     }
     .portfolio-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-3px);
         box-shadow: var(--pt-shadow-lg);
         border-color: var(--pt-interactive-accent);
     }
@@ -36,33 +75,34 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.75rem 1rem;
-        border-radius: var(--pt-radius-md);
+        padding: 0.6rem 0.85rem;
+        border-radius: 8px;
         background: var(--pt-bg-surface);
         color: var(--pt-text-primary);
         text-decoration: none;
-        transition: all 0.2s;
+        transition: all 0.15s;
         border: 1px solid transparent;
     }
     .tool-link:hover {
         background: var(--pt-bg-surface-hover);
-        border-color: var(--pt-interactive-accent);
+        border-color: var(--pt-border-accent);
         color: var(--pt-text-primary);
-        transform: translateX(4px);
+        transform: translateX(3px);
     }
     .tool-link i {
-        font-size: 1.25rem;
-        width: 28px;
+        font-size: 1.1rem;
+        width: 24px;
         text-align: center;
     }
 
     .time-bar {
         display: flex;
-        height: 8px;
+        height: 6px;
         border-radius: 4px;
         overflow: hidden;
+        gap: 2px;
     }
-    .time-bar > div { transition: width 0.3s ease; }
+    .time-bar > div { transition: width 0.3s ease; border-radius: 3px; }
 </style>
 {% endblock %}
 
@@ -71,8 +111,8 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-speedometer2 me-2"></i>Portfolio Dashboard</h2>
-            <p class="text-muted mb-0">Enterprise application portfolio analytics</p>
+            <h2 class="mb-1">Portfolio Dashboard</h2>
+            <p class="text-muted mb-0">Manage and analyze your application portfolios</p>
         </div>
         <div class="d-flex gap-2">
             {% if portfolios %}
@@ -90,27 +130,43 @@
     <!-- KPI Summary Row -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
-            <div class="card p-3 text-center kpi-card kpi-gold">
-                <div class="fs-2 fw-bold" style="color: var(--pt-interactive-accent);">{{ portfolios|length }}</div>
-                <div class="text-muted small text-uppercase" style="letter-spacing: 0.05em; font-weight: 600;">Portfolios</div>
+            <div class="card kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Portfolios</span>
+                    <span class="kpi-icon gold"><i class="bi bi-collection"></i></span>
+                </div>
+                <div class="kpi-value" style="color: var(--pt-interactive-accent);">{{ portfolios|length }}</div>
+                <div class="kpi-subtitle">Active workspaces</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="card p-3 text-center kpi-card kpi-blue">
-                <div class="fs-2 fw-bold" style="color: var(--pt-interactive-primary);">{{ total_apps }}</div>
-                <div class="text-muted small text-uppercase" style="letter-spacing: 0.05em; font-weight: 600;">Total Applications</div>
+            <div class="card kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Applications</span>
+                    <span class="kpi-icon blue"><i class="bi bi-app-indicator"></i></span>
+                </div>
+                <div class="kpi-value" style="color: var(--pt-interactive-primary);">{{ total_apps }}</div>
+                <div class="kpi-subtitle">Across all portfolios</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="card p-3 text-center kpi-card kpi-green">
-                <div class="fs-2 fw-bold" style="color: var(--pt-color-green-400);">{{ "%.0f"|format(avg_score) }}</div>
-                <div class="text-muted small text-uppercase" style="letter-spacing: 0.05em; font-weight: 600;">Avg Health Score</div>
+            <div class="card kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Avg Health Score</span>
+                    <span class="kpi-icon green"><i class="bi bi-heart-pulse"></i></span>
+                </div>
+                <div class="kpi-value" style="color: var(--pt-color-green-400);">{{ "%.0f"|format(avg_score) }}</div>
+                <div class="kpi-subtitle">Portfolio average</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="card p-3 text-center kpi-card kpi-green">
-                <div class="fs-2 fw-bold" style="color: var(--pt-color-green-400);">${{ "{:,.0f}".format(total_savings) }}</div>
-                <div class="text-muted small text-uppercase" style="letter-spacing: 0.05em; font-weight: 600;">Savings Identified</div>
+            <div class="card kpi-card">
+                <div class="kpi-header">
+                    <span class="kpi-label">Savings Identified</span>
+                    <span class="kpi-icon green"><i class="bi bi-piggy-bank"></i></span>
+                </div>
+                <div class="kpi-value" style="color: var(--pt-color-green-400);">${{ "{:,.0f}".format(total_savings // 1000) }}k</div>
+                <div class="kpi-subtitle">Cost optimization</div>
             </div>
         </div>
     </div>

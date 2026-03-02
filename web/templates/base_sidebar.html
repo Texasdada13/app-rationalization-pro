@@ -3,8 +3,12 @@
 {# Child templates override this to highlight the active nav item #}
 {% block active_page %}{% endblock %}
 
+{# Child templates set the topbar page title #}
+{% block page_title %}{% endblock %}
+
 {% block page_layout %}
 {% set _active = self.active_page() | trim %}
+{% set _title = self.page_title() | trim %}
 
 <div class="sidebar-layout">
 
@@ -100,7 +104,7 @@
         <!-- Bottom links -->
         <div class="sidebar-bottom">
             <a href="/dashboard" class="sidebar-link">
-                <i class="bi bi-speedometer2"></i>All Portfolios
+                <i class="bi bi-grid-3x3-gap"></i>All Portfolios
             </a>
             <a href="/chat{% if portfolio is defined %}?portfolio_id={{ portfolio.id }}{% endif %}" class="sidebar-link">
                 <i class="bi bi-chat-dots"></i>AI Consultant
@@ -109,42 +113,39 @@
 
     </aside>
 
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <!-- ===== Main Content Area ===== -->
     <div class="sidebar-content">
 
-        <!-- Mobile top bar -->
-        <div class="sidebar-mobile-bar">
-            <button class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
-                <i class="bi bi-list"></i>
-            </button>
-            <span style="font-weight:600; font-size:0.95rem;">{{ app_name }}</span>
-        </div>
+        <!-- Topbar -->
+        <header class="pt-topbar">
+            <div class="pt-topbar-left">
+                <button class="topbar-mobile-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h1 class="pt-page-title">{{ _title if _title else app_name }}</h1>
+            </div>
+            <div class="pt-topbar-right">
+                <a href="/dashboard" class="pt-icon-btn" title="All Portfolios">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </a>
+                {% if portfolio is defined %}
+                <a href="/chat?portfolio_id={{ portfolio.id }}" class="pt-icon-btn" title="AI Consultant">
+                    <i class="bi bi-chat-dots"></i>
+                </a>
+                {% endif %}
+            </div>
+        </header>
 
         <main>
             {% block content %}{% endblock %}
         </main>
 
-        <footer>
-            <div class="container">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 style="color: var(--pt-text-primary);">{{ app_name }}</h6>
-                        <p class="small mb-0" style="color: var(--pt-text-muted);">AI-powered application portfolio rationalization and optimization.</p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <p class="mb-1 small" style="color: var(--pt-text-muted);">&copy; {{ current_year }} Powered by <a href="https://patriottechsystems.com" target="_blank">Patriot Tech Systems</a></p>
-                        <p class="mb-0 small"><a href="mailto:info@patriottechsystems.com">info@patriottechsystems.com</a></p>
-                    </div>
-                </div>
-            </div>
-        </footer>
-
     </div><!-- /sidebar-content -->
 
 </div><!-- /sidebar-layout -->
-
-<!-- Mobile overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <script>
 function toggleSidebar() {
