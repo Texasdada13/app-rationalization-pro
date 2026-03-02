@@ -1,9 +1,8 @@
-{% extends "base.html" %}
-{% from "_subnav.html" import portfolio_subnav %}
+{% extends "base_sidebar.html" %}
 
 {% block title %}Dependency Mapping - {{ portfolio.name }}{% endblock %}
 
-{% block subnav %}{{ portfolio_subnav(portfolio.id, 'dependencies') }}{% endblock %}
+{% block active_page %}dependencies{% endblock %}
 
 {% block extra_css %}
 <style>

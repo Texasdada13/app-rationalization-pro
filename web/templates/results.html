@@ -1,9 +1,8 @@
-{% extends "base.html" %}
-{% from "_subnav.html" import portfolio_subnav %}
+{% extends "base_sidebar.html" %}
 
 {% block title %}Results - {{ portfolio.name }} - {{ app_name }}{% endblock %}
 
-{% block subnav %}{{ portfolio_subnav(portfolio.id, 'results') }}{% endblock %}
+{% block active_page %}results{% endblock %}
 
 {% block content %}
 <div class="container py-4">

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{# Child templates override this to highlight the active nav item #}
+{% block active_page %}{% endblock %}
+
+{% block page_layout %}
+{% set _active = self.active_page() | trim %}
+
+<div class="sidebar-layout">
+
+    <!-- ===== Sidebar ===== -->
+    <aside class="app-sidebar" id="appSidebar">
+
+        <!-- Header -->
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='img/logo-shield.svg') }}" alt="Patriot Tech">
+            <div>
+                <div class="sidebar-product-name">{{ app_name }}</div>
+                <div class="sidebar-company">Patriot Tech</div>
+            </div>
+        </div>
+
+        <!-- Current Portfolio -->
+        {% if portfolio is defined %}
+        <div class="sidebar-portfolio-badge">
+            <i class="bi bi-folder2-open" style="color: var(--pt-interactive-primary); flex-shrink:0;"></i>
+            <span style="overflow:hidden; text-overflow:ellipsis;">{{ portfolio.name }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+
+            <div class="sidebar-section-label">Core</div>
+            <a href="/portfolio/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'portfolio' }}">
+                <i class="bi bi-folder2-open"></i>Portfolio
+            </a>
+            <a href="/results/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'results' }}">
+                <i class="bi bi-bar-chart"></i>Results
+            </a>
+
+            <div class="sidebar-section-label">Analysis</div>
+            <a href="/costs/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'costs' }}">
+                <i class="bi bi-currency-dollar"></i>Cost Analysis
+            </a>
+            <a href="/compliance/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'compliance' }}">
+                <i class="bi bi-shield-check"></i>Compliance
+            </a>
+            <a href="/risk/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'risk' }}">
+                <i class="bi bi-shield-exclamation"></i>Risk Assessment
+            </a>
+            <a href="/benchmark/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'benchmark' }}">
+                <i class="bi bi-speedometer2"></i>Benchmark
+            </a>
+
+            <div class="sidebar-section-label">Planning</div>
+            <a href="/whatif/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'whatif' }}">
+                <i class="bi bi-lightning-charge"></i>What-If
+            </a>
+            <a href="/roadmap/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'roadmap' }}">
+                <i class="bi bi-map"></i>Roadmap
+            </a>
+            <a href="/budget/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'budget' }}">
+                <i class="bi bi-wallet2"></i>Budget
+            </a>
+            <a href="/migration/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'migration' }}">
+                <i class="bi bi-cloud-arrow-up"></i>Migration
+            </a>
+
+            <div class="sidebar-section-label">Deep Dive</div>
+            <a href="/dependencies/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'dependencies' }}">
+                <i class="bi bi-diagram-3"></i>Dependencies
+            </a>
+            <a href="/integrations/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'integrations' }}">
+                <i class="bi bi-plug"></i>Integrations
+            </a>
+            <a href="/vendors/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'vendors' }}">
+                <i class="bi bi-building"></i>Vendors
+            </a>
+            <a href="/tech-debt/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'tech-debt' }}">
+                <i class="bi bi-wrench"></i>Tech Debt
+            </a>
+            <a href="/lifecycle/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'lifecycle' }}">
+                <i class="bi bi-hourglass-split"></i>Lifecycle
+            </a>
+
+            <div class="sidebar-section-label">Advanced</div>
+            <a href="/clustering/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'clustering' }}">
+                <i class="bi bi-diagram-2"></i>ML Clustering
+            </a>
+            <a href="/executive-dashboard/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'executive' }}">
+                <i class="bi bi-speedometer"></i>Executive
+            </a>
+            <a href="/risk-heatmap/{{ portfolio.id }}" class="sidebar-link {{ 'active' if _active == 'risk-heatmap' }}">
+                <i class="bi bi-grid-3x3"></i>Risk Heat Map
+            </a>
+
+        </nav>
+
+        <!-- Bottom links -->
+        <div class="sidebar-bottom">
+            <a href="/dashboard" class="sidebar-link">
+                <i class="bi bi-speedometer2"></i>All Portfolios
+            </a>
+            <a href="/chat{% if portfolio is defined %}?portfolio_id={{ portfolio.id }}{% endif %}" class="sidebar-link">
+                <i class="bi bi-chat-dots"></i>AI Consultant
+            </a>
+        </div>
+
+    </aside>
+
+    <!-- ===== Main Content Area ===== -->
+    <div class="sidebar-content">
+
+        <!-- Mobile top bar -->
+        <div class="sidebar-mobile-bar">
+            <button class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <span style="font-weight:600; font-size:0.95rem;">{{ app_name }}</span>
+        </div>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 style="color: var(--pt-text-primary);">{{ app_name }}</h6>
+                        <p class="small mb-0" style="color: var(--pt-text-muted);">AI-powered application portfolio rationalization and optimization.</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-1 small" style="color: var(--pt-text-muted);">&copy; {{ current_year }} Powered by <a href="https://patriottechsystems.com" target="_blank">Patriot Tech Systems</a></p>
+                        <p class="mb-0 small"><a href="mailto:info@patriottechsystems.com">info@patriottechsystems.com</a></p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </div><!-- /sidebar-content -->
+
+</div><!-- /sidebar-layout -->
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<script>
+function toggleSidebar() {
+    document.getElementById('appSidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+</script>
+
+{% endblock %}

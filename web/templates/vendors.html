@@ -1,9 +1,8 @@
-{% extends "base.html" %}
-{% from "_subnav.html" import portfolio_subnav %}
+{% extends "base_sidebar.html" %}
 
 {% block title %}Vendor Management - {{ portfolio.name }}{% endblock %}
 
-{% block subnav %}{{ portfolio_subnav(portfolio.id, 'vendors') }}{% endblock %}
+{% block active_page %}vendors{% endblock %}
 
 {% block extra_css %}
 <style>
